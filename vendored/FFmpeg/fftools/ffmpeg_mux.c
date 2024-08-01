@@ -767,20 +767,20 @@ static void mux_final_stats(Muxer *mux)
                of->index, j, av_get_media_type_string(type));
         if (ost->enc)
         {
-            av_log(of, AV_LOG_VERBOSE, "%" PRIu64 " frames encoded",
+            av_log(of, AV_LOG_VERBOSE, "%ulld frames encoded",
                    ost->frames_encoded);
             if (type == AVMEDIA_TYPE_AUDIO)
-                av_log(of, AV_LOG_VERBOSE, " (%" PRIu64 " samples)", ost->samples_encoded);
+                av_log(of, AV_LOG_VERBOSE, " (%ulld samples)", ost->samples_encoded);
             av_log(of, AV_LOG_VERBOSE, "; ");
         }
 
-        av_log(of, AV_LOG_VERBOSE, "%" PRIu64 " packets muxed (%" PRIu64 " bytes); ",
+        av_log(of, AV_LOG_VERBOSE, "%ulld packets muxed (%ulld bytes); ",
                atomic_load(&ost->packets_written), s);
 
         av_log(of, AV_LOG_VERBOSE, "\n");
     }
 
-    av_log(of, AV_LOG_VERBOSE, "  Total: %" PRIu64 " packets (%" PRIu64 " bytes) muxed\n",
+    av_log(of, AV_LOG_VERBOSE, "  Total: %ulld packets (%ulld bytes) muxed\n",
            total_packets, total_size);
 
     if (total_size && file_size > 0 && file_size >= total_size)

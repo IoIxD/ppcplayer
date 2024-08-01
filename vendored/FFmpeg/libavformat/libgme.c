@@ -21,7 +21,7 @@
  * libgme demuxer
  */
 
-#include <gme/gme.h>
+#include "../../gme/gme/gme.h"
 #include "libavutil/mem.h"
 #include "libavutil/opt.h"
 #include "avformat.h"

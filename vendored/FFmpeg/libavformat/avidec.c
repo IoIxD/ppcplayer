@@ -131,8 +131,8 @@ static const AVMetadataConv avi_metadata_conv[] = {
 static int avi_load_index(AVFormatContext *s);
 static int guess_ni_flag(AVFormatContext *s);
 
-#define print_tag(s, str, tag, size)                                  \
-    av_log(s, AV_LOG_TRACE, "pos:%" PRIX64 " %s: tag=%s size=0x%x\n", \
+#define print_tag(s, str, tag, size)                           \
+    av_log(s, AV_LOG_TRACE, "pos:%lld %s: tag=%s size=0x%x\n", \
            avio_tell(pb), str, av_fourcc2str(tag), size)
 
 static inline int get_duration(AVIStream *ast, int len)
@@ -190,7 +190,7 @@ static int read_odml_index(AVFormatContext *s, int64_t frame_num)
 
     av_log(s, AV_LOG_TRACE,
            "longs_per_entry:%d index_type:%d entries_in_use:%d "
-           "chunk_id:%X base:%16" PRIX64 " frame_num:%lld\n",
+           "chunk_id:%X base:%16ulld frame_num:%lld\n",
            longs_per_entry,
            index_type,
            entries_in_use,
@@ -579,7 +579,7 @@ static int avi_read_header(AVFormatContext *s)
                     avi->movi_end = avi->movi_list + size + (size & 1);
                 else
                     avi->movi_end = avi->fsize;
-                av_log(s, AV_LOG_TRACE, "movi end=%" PRIx64 "\n", avi->movi_end);
+                av_log(s, AV_LOG_TRACE, "movi end=%lld\n", avi->movi_end);
                 goto end_of_header;
             }
             else if (tag1 == MKTAG('I', 'N', 'F', 'O'))
@@ -1776,7 +1776,7 @@ static int avi_read_idx1(AVFormatContext *s, int size)
         flags = avio_rl32(pb);
         pos = avio_rl32(pb);
         len = avio_rl32(pb);
-        av_log(s, AV_LOG_TRACE, "%d: tag=0x%x flags=0x%x pos=0x%" PRIx64 " len=%d/",
+        av_log(s, AV_LOG_TRACE, "%d: tag=0x%x flags=0x%x pos=0x%lld len=%d/",
                i, tag, flags, pos, len);
 
         index = ((tag & 0xff) - '0') * 10;
@@ -1949,7 +1949,7 @@ static int avi_load_index(AVFormatContext *s)
 
     if (avio_seek(pb, avi->movi_end, SEEK_SET) < 0)
         goto the_end; // maybe truncated file
-    av_log(s, AV_LOG_TRACE, "movi_end=0x%" PRIx64 "\n", avi->movi_end);
+    av_log(s, AV_LOG_TRACE, "movi_end=0x%lld\n", avi->movi_end);
     for (;;)
     {
         tag = avio_rl32(pb);

@@ -73,7 +73,7 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
             exit(1);
         }
 
-        printf("saving frame %3" PRId64 "\n", dec_ctx->frame_num);
+        printf("saving frame %3lld"\n", dec_ctx->frame_num);
         fflush(stdout);
 
         /* the picture is allocated by the decoder. no need to

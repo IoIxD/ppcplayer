@@ -261,7 +261,7 @@ static int scan_file(AVFormatContext *avctx, AVStream *vst, AVStream *ast, int f
             size -= 16;
             if (size >= 8)
             {
-                read_uint64(avctx, pb, "shutterValue", "%" PRIi64);
+                read_uint64(avctx, pb, "shutterValue", "%lld");
                 size -= 8;
             }
         }
@@ -313,7 +313,7 @@ static int read_header(AVFormatContext *avctx)
     avio_skip(pb, 8);
 
     guid = avio_rl64(pb);
-    snprintf(guidstr, sizeof(guidstr), "0x%" PRIx64, guid);
+    snprintf(guidstr, sizeof(guidstr), "0x%lld", guid);
     av_dict_set(&avctx->metadata, "guid", guidstr, 0);
 
     avio_skip(pb, 8); // fileNum, fileCount, fileFlags

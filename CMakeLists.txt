@@ -55,50 +55,47 @@ include(ExternalProject)
 message(CMAKE_C_COMPILER ": " ${CMAKE_C_COMPILER})
 message(CMAKE_CXX_COMPILER ": " ${CMAKE_CXX_COMPILER})
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/vendored/FFmpeg)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/vendored/libass)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/vendored/libbluray)
+include_directories(${CMAKE_SOURCE_DIR}/vendored/FFmpeg)
+#include_directories(${CMAKE_SOURCE_DIR}/vendored/libass)
 include(ExternalProject)
 
-function(add_vendored __lib__)
+macro(add_vendored __lib__ __extra_args__)  
     ExternalProject_Add(
         lib${__lib__}
-        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendored/lib${__lib__}
-        CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vendored/lib${__lib__}/configure --prefix=${CMAKE_CURRENT_SOURCE_DIR}/lib --arch=ppc32 --target-os=none --cross-prefix=powerpc-apple-macos- --enable-cross-compile --disable-pthreads --disable-altivec 
-        PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/vendored/lib${__lib__}
+        SOURCE_DIR ${CMAKE_SOURCE_DIR}/vendored/lib${__lib__}
+        CONFIGURE_COMMAND libtoolize && aclocal && autoupdate && automake --add-missing && autoreconf -fvi && ${CMAKE_SOURCE_DIR}/vendored/lib${__lib__}/configure --prefix=${CMAKE_SOURCE_DIR}/lib ${__extra_args__} 
+        PREFIX ${CMAKE_SOURCE_DIR}/vendored/lib${__lib__}
         BUILD_COMMAND make -j$(nproc)
         BUILD_IN_SOURCE 1
     )
-    add_dependencies(os9player lib${__lib__})
-    target_link_libraries(os9player ${__lib__})
-endfunction()
+    include_directories(${CMAKE_SOURCE_DIR}/vendored/lib${__lib__}/src)
+    include_directories(${CMAKE_SOURCE_DIR}/vendored/lib${__lib__}/include)
+    target_link_libraries(os9player ${__lib__} STATIC)
+endmacro()
 
+#add_subdirectory(vendored/gme)
+#include_directories(BEFORE ${CMAKE_SOURCE_DIR}/vendored/gme)
+# add_vendored(modplug "")
+# add_vendored(mp3lame "")
+#target_link_libraries(os9player gme)
 
-add_subdirectory(vendored/libcodec2)
-add_subdirectory(vendored/libopus)
-add_vendored(ass)
-add_vendored(bluray)
-add_vendored(bs2b)
-add_vendored(codec2)
-add_vendored(dc1394)
-add_vendored(dvdnav)
-add_vendored(dvdread)
-add_vendored(gme)
-add_vendored(modplug)
-add_vendored(mp3lame)
-add_vendored(openmpt)
+#target_link_libraries(os9player xavs)
+#add_vendored(vorbis true)
+#add_vendored(x264 true)
+#add_vendored(x265 true)
+#add_vendored(cdio true)
 
 ExternalProject_Add(
     libff
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendored/FFmpeg
-    CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vendored/FFmpeg/configure --prefix=${CMAKE_CURRENT_SOURCE_DIR}/lib --arch=ppc32 --target-os=none --cross-prefix=powerpc-apple-macos- --enable-cross-compile --disable-pthreads --disable-altivec --enable-libsvtav1 --disable-ffprobe --enable-libxeve --enable-libxevd --enable-libxavs --enable-libxavs2 --enable-libx265 --enable-libx264 --enable-libwebp --enable-libvvenc --enable-libvpx --enable-libvorbis --enable-libvo-amrwbenc --enable-libvmaf --enable-libuavs3d --enable-libtwolame --enable-libtheora --enable-libsrt --enable-libspeex --enable-libsoxr --enable-libsnappy --enable-libsmbclient --enable-libshine --enable-librtmp --enable-librsvg --enable-librist --enable-librabbitmq --enable-libquirc --enable-libqrencode --enable-libopus --enable-libopenmpt --enable-lasx --enable-libass --enable-libbluray --enable-libbs2b --enable-libcdio --enable-libcodec2 --enable-libdc1394 --enable-libdrm --enable-libdvdnav --enable-libdvdread --enable-libgme --enable-libmodplug --enable-libmp3lame --enable-gpl --enable-version3 --enable-nonfree 
-    PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/vendored/FFmpeg
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/vendored/FFmpeg
+    CONFIGURE_COMMAND ${CMAKE_SOURCE_DIR}/vendored/FFmpeg/configure --prefix=${CMAKE_SOURCE_DIR}/lib --arch=ppc32 --target-os=none --cross-prefix=powerpc-apple-macos- --enable-cross-compile --disable-pthreads --disable-altivec --enable-lasx
+    PREFIX ${CMAKE_SOURCE_DIR}/vendored/FFmpeg
     BUILD_COMMAND make -j$(nproc)
     BUILD_IN_SOURCE 1
 )
 
 add_dependencies(os9player libff)
-target_link_directories(os9player PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib/)
+target_link_directories(os9player PUBLIC ${CMAKE_SOURCE_DIR}/lib/lib/)
 target_link_libraries(os9player avcodec)
 target_link_libraries(os9player avdevice)
 target_link_libraries(os9player avfilter)

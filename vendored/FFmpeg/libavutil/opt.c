@@ -1086,7 +1086,7 @@ static int opt_get_elem(const AVOption *o, uint8_t **pbuf, size_t buf_len,
         ret = snprintf(*pbuf, buf_len, "%lld", *(int64_t *)dst);
         break;
     case AV_OPT_TYPE_UINT64:
-        ret = snprintf(*pbuf, buf_len, "%" PRIu64, *(uint64_t *)dst);
+        ret = snprintf(*pbuf, buf_len, "%ulld", *(uint64_t *)dst);
         break;
     case AV_OPT_TYPE_FLOAT:
         ret = snprintf(*pbuf, buf_len, "%f", *(float *)dst);
@@ -1659,7 +1659,7 @@ static void log_default(void *obj, void *av_log_obj, const AVOption *opt)
         }
         else
         {
-            av_log(av_log_obj, AV_LOG_INFO, "%" PRIX64, opt->default_val.i64);
+            av_log(av_log_obj, AV_LOG_INFO, "%lld", opt->default_val.i64);
         }
         break;
     }

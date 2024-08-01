@@ -854,7 +854,7 @@ static int cbs_av1_split_fragment(CodedBitstreamContext *ctx,
         if (size < obu_length)
         {
             av_log(ctx->log_ctx, AV_LOG_ERROR, "Invalid OBU length: "
-                                               "%" PRIu64 ", but only %" SIZE_SPECIFIER " bytes remaining in fragment.\n",
+                                               "%ulld, but only %" SIZE_SPECIFIER " bytes remaining in fragment.\n",
                    obu_length, size);
             err = AVERROR_INVALIDDATA;
             goto fail;

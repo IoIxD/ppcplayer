@@ -423,7 +423,7 @@ redo:
             s->retry_after = 0;
         }
 
-        av_log(h, AV_LOG_WARNING, "Will reconnect at %" PRIu64 " in %d second(s).\n", off, reconnect_delay);
+        av_log(h, AV_LOG_WARNING, "Will reconnect at %ulld in %d second(s).\n", off, reconnect_delay);
         ret = ff_network_sleep_interruptible(1000U * 1000 * reconnect_delay, &h->interrupt_callback);
         if (ret != AVERROR(ETIMEDOUT))
             goto fail;
@@ -1696,7 +1696,7 @@ static int http_connect(URLContext *h, const char *path, const char *local_path,
     // server supports seeking by analysing the reply headers.
     if (!has_header(s->headers, "\r\nRange: ") && !post && (s->off > 0 || s->end_off || s->seekable != 0))
     {
-        av_bprintf(&request, "Range: bytes=%" PRIu64 "-", s->off);
+        av_bprintf(&request, "Range: bytes=%ulld-", s->off);
         if (s->end_off)
             av_bprintf(&request, "%lld", s->end_off - 1);
         av_bprintf(&request, "\r\n");
@@ -1815,7 +1815,7 @@ static int http_buf_read(URLContext *h, uint8_t *buf, int size)
             s->chunksize = strtoull(line, NULL, 16);
 
             av_log(h, AV_LOG_TRACE,
-                   "Chunked encoding data size: %" PRIu64 "\n",
+                   "Chunked encoding data size: %ulld\n",
                    s->chunksize);
 
             if (!s->chunksize && s->multiple_requests)
@@ -1832,7 +1832,7 @@ static int http_buf_read(URLContext *h, uint8_t *buf, int size)
             }
             else if (s->chunksize == UINT64_MAX)
             {
-                av_log(h, AV_LOG_ERROR, "Invalid chunk size %" PRIu64 "\n",
+                av_log(h, AV_LOG_ERROR, "Invalid chunk size %ulld\n",
                        s->chunksize);
                 return AVERROR(EINVAL);
             }
@@ -1859,7 +1859,7 @@ static int http_buf_read(URLContext *h, uint8_t *buf, int size)
             (!s->willclose || s->chunksize == UINT64_MAX) && s->off < target_end)
         {
             av_log(h, AV_LOG_ERROR,
-                   "Stream ends prematurely at %" PRIu64 ", should be %" PRIu64 "\n",
+                   "Stream ends prematurely at %ulld, should be %ulld\n",
                    s->off, target_end);
             return AVERROR(EIO);
         }
@@ -1955,7 +1955,7 @@ static int http_read_stream(URLContext *h, uint8_t *buf, int size)
             reconnect_delay_total > s->reconnect_delay_total_max)
             return AVERROR(EIO);
 
-        av_log(h, AV_LOG_WARNING, "Will reconnect at %" PRIu64 " in %d second(s), error=%s.\n", s->off, reconnect_delay, av_err2str(read_ret));
+        av_log(h, AV_LOG_WARNING, "Will reconnect at %ulld in %d second(s), error=%s.\n", s->off, reconnect_delay, av_err2str(read_ret));
         err = ff_network_sleep_interruptible(1000U * 1000 * reconnect_delay, &h->interrupt_callback);
         if (err != AVERROR(ETIMEDOUT))
             return err;
@@ -1965,7 +1965,7 @@ static int http_read_stream(URLContext *h, uint8_t *buf, int size)
         seek_ret = http_seek_internal(h, target, SEEK_SET, 1);
         if (seek_ret >= 0 && seek_ret != target)
         {
-            av_log(h, AV_LOG_ERROR, "Failed to reconnect at %" PRIu64 ".\n", target);
+            av_log(h, AV_LOG_ERROR, "Failed to reconnect at %ulld.\n", target);
             return read_ret;
         }
 

@@ -577,7 +577,7 @@ static av_cold int kmsgrab_read_header(AVFormatContext *avctx)
     {
         av_log(avctx, AV_LOG_INFO, "Template framebuffer is "
                                    "%" PRIu32 ": %" PRIu32 "x%" PRIu32 " "
-                                   "format %" PRIx32 " modifier %" PRIx64 " flags %" PRIx32 ".\n",
+                                   "format %" PRIx32 " modifier %lld flags %" PRIx32 ".\n",
                fb2->fb_id, fb2->width, fb2->height,
                fb2->pixel_format, fb2->modifier, fb2->flags);
 
@@ -625,7 +625,7 @@ static av_cold int kmsgrab_read_header(AVFormatContext *avctx)
                 ctx->drm_format_modifier != fb2->modifier)
             {
                 av_log(avctx, AV_LOG_ERROR, "Framebuffer format modifier "
-                                            "%" PRIx64 " does not match expected modifier.\n",
+                                            "%lld does not match expected modifier.\n",
                        fb2->modifier);
                 err = AVERROR(EINVAL);
                 goto fail;
@@ -636,7 +636,7 @@ static av_cold int kmsgrab_read_header(AVFormatContext *avctx)
             }
         }
         av_log(avctx, AV_LOG_VERBOSE, "Format is %s, from "
-                                      "DRM format %" PRIx32 " modifier %" PRIx64 ".\n",
+                                      "DRM format %" PRIx32 " modifier %lld.\n",
                av_get_pix_fmt_name(ctx->format),
                ctx->drm_format, ctx->drm_format_modifier);
 

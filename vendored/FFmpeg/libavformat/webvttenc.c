@@ -39,14 +39,14 @@ static void webvtt_write_time(AVIOContext *pb, int64_t millisec)
     min -= 60 * hour;
 
     if (hour > 0)
-        avio_printf(pb, "%02"PRId64":", hour);
+        avio_printf(pb, "02ulld:", hour);
 
-    avio_printf(pb, "%02"PRId64":%02"PRId64".%03"PRId64"", min, sec, millisec);
+    avio_printf(pb, "02ulld:02ulld.03ulld", min, sec, millisec);
 }
 
 static int webvtt_write_header(AVFormatContext *ctx)
 {
-    AVStream     *s = ctx->streams[0];
+    AVStream *s = ctx->streams[0];
     AVIOContext *pb = ctx->pb;
 
     avpriv_set_pts_info(s, 64, 1, 1000);
@@ -58,7 +58,7 @@ static int webvtt_write_header(AVFormatContext *ctx)
 
 static int webvtt_write_packet(AVFormatContext *ctx, AVPacket *pkt)
 {
-    AVIOContext  *pb = ctx->pb;
+    AVIOContext *pb = ctx->pb;
     size_t id_size, settings_size;
     int id_size_int, settings_size_int;
     uint8_t *id, *settings;
@@ -98,16 +98,16 @@ static int webvtt_write_packet(AVFormatContext *ctx, AVPacket *pkt)
 }
 
 const FFOutputFormat ff_webvtt_muxer = {
-    .p.name            = "webvtt",
-    .p.long_name       = NULL_IF_CONFIG_SMALL("WebVTT subtitle"),
-    .p.extensions      = "vtt",
-    .p.mime_type       = "text/vtt",
-    .p.flags           = AVFMT_VARIABLE_FPS | AVFMT_TS_NONSTRICT,
-    .p.video_codec     = AV_CODEC_ID_NONE,
-    .p.audio_codec     = AV_CODEC_ID_NONE,
-    .p.subtitle_codec  = AV_CODEC_ID_WEBVTT,
-    .write_header      = webvtt_write_header,
-    .write_packet      = webvtt_write_packet,
-    .flags_internal    = FF_OFMT_FLAG_MAX_ONE_OF_EACH |
-                         FF_OFMT_FLAG_ONLY_DEFAULT_CODECS,
+    .p.name = "webvtt",
+    .p.long_name = NULL_IF_CONFIG_SMALL("WebVTT subtitle"),
+    .p.extensions = "vtt",
+    .p.mime_type = "text/vtt",
+    .p.flags = AVFMT_VARIABLE_FPS | AVFMT_TS_NONSTRICT,
+    .p.video_codec = AV_CODEC_ID_NONE,
+    .p.audio_codec = AV_CODEC_ID_NONE,
+    .p.subtitle_codec = AV_CODEC_ID_WEBVTT,
+    .write_header = webvtt_write_header,
+    .write_packet = webvtt_write_packet,
+    .flags_internal = FF_OFMT_FLAG_MAX_ONE_OF_EACH |
+                      FF_OFMT_FLAG_ONLY_DEFAULT_CODECS,
 };

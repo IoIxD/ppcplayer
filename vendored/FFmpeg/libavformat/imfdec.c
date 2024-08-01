@@ -827,7 +827,7 @@ static int imf_read_packet(AVFormatContext *s, AVPacket *pkt)
     if (ret)
         return ret;
 
-    av_log(s, AV_LOG_DEBUG, "Got packet: pts=%lld, dts=%" PRId64 ", duration=%lld, stream_index=%d, pos=%" PRId64 ", time_base=" AVRATIONAL_FORMAT "\n", pkt->pts, pkt->dts, pkt->duration,
+    av_log(s, AV_LOG_DEBUG, "Got packet: pts=%lld, dts=%lld, duration=%lld, stream_index=%d, pos=%lld, time_base=" AVRATIONAL_FORMAT "\n", pkt->pts, pkt->dts, pkt->duration,
            pkt->stream_index, pkt->pos, AVRATIONAL_ARG(pkt->time_base));
 
     /* IMF resources contain only one stream */

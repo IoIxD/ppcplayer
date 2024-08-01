@@ -885,9 +885,9 @@ static int vulkan_decode_get_profile(AVCodecContext *avctx, AVBufferRef *frames_
            caps->pictureAccessGranularity.width);
     av_log(avctx, AV_LOG_VERBOSE, "    Height alignment: %i\n",
            caps->pictureAccessGranularity.height);
-    av_log(avctx, AV_LOG_VERBOSE, "    Bitstream offset alignment: %" PRIu64 "\n",
+    av_log(avctx, AV_LOG_VERBOSE, "    Bitstream offset alignment: %ulld\n",
            caps->minBitstreamBufferOffsetAlignment);
-    av_log(avctx, AV_LOG_VERBOSE, "    Bitstream size alignment: %" PRIu64 "\n",
+    av_log(avctx, AV_LOG_VERBOSE, "    Bitstream size alignment: %ulld\n",
            caps->minBitstreamBufferSizeAlignment);
     av_log(avctx, AV_LOG_VERBOSE, "    Maximum references: %u\n",
            caps->maxDpbSlots);

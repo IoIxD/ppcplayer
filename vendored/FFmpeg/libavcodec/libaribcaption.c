@@ -937,7 +937,7 @@ static int aribcaption_decode(AVCodecContext *avctx, AVSubtitle *sub,
     ARIBCaptionContext *ctx = avctx->priv_data;
     int status;
 
-    ff_dlog(ctx, "ARIB caption packet pts=%" PRIx64 ":\n", avpkt->pts);
+    ff_dlog(ctx, "ARIB caption packet pts=%lld:\n", avpkt->pts);
     if (sub->num_rects)
     {
         avpriv_request_sample(ctx, "Different Version of Segment asked Twice");

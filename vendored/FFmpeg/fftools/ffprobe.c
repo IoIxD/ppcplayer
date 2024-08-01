@@ -2342,7 +2342,7 @@ static void print_dovi_metadata(WriterContext *w, const AVDOVIMetadata *dovi)
                 case AV_DOVI_MAPPING_POLYNOMIAL:
                     print_str("mapping_idc_name", "polynomial");
                     print_int("poly_order", curve->poly_order[i]);
-                    print_list_fmt("poly_coef", "%" PRIi64,
+                    print_list_fmt("poly_coef", "%lld",
                                    curve->poly_order[i] + 1, 1,
                                    curve->poly_coef[i][idx]);
                     break;
@@ -2350,7 +2350,7 @@ static void print_dovi_metadata(WriterContext *w, const AVDOVIMetadata *dovi)
                     print_str("mapping_idc_name", "mmr");
                     print_int("mmr_order", curve->mmr_order[i]);
                     print_int("mmr_constant", curve->mmr_constant[i]);
-                    print_list_fmt("mmr_coef", "%" PRIi64,
+                    print_list_fmt("mmr_coef", "%lld",
                                    curve->mmr_order[i], 7,
                                    curve->mmr_coef[i][idx][idx2]);
                     break;
@@ -2643,7 +2643,7 @@ static void print_film_grain_params(WriterContext *w,
 
     av_bprint_init(&pbuf, 1, AV_BPRINT_SIZE_UNLIMITED);
     print_str("type", film_grain_type_names[fgp->type]);
-    print_fmt("seed", "%" PRIu64, fgp->seed);
+    print_fmt("seed", "%ulld", fgp->seed);
     print_int("width", fgp->width);
     print_int("height", fgp->height);
     print_int("subsampling_x", fgp->subsampling_x);
@@ -3862,11 +3862,11 @@ static int show_stream(WriterContext *w, AVFormatContext *fmt_ctx, int stream_id
     else
         print_str_opt("nb_frames", "N/A");
     if (nb_streams_frames[stream_idx])
-        print_fmt("nb_read_frames", "%" PRIu64, nb_streams_frames[stream_idx]);
+        print_fmt("nb_read_frames", "%ulld", nb_streams_frames[stream_idx]);
     else
         print_str_opt("nb_read_frames", "N/A");
     if (nb_streams_packets[stream_idx])
-        print_fmt("nb_read_packets", "%" PRIu64, nb_streams_packets[stream_idx]);
+        print_fmt("nb_read_packets", "%ulld", nb_streams_packets[stream_idx]);
     else
         print_str_opt("nb_read_packets", "N/A");
     if (do_show_data)
@@ -4192,7 +4192,7 @@ static int show_stream_group(WriterContext *w, InputFile *ifile, AVStreamGroup *
     writer_print_section_header(w, NULL, SECTION_ID_STREAM_GROUP);
     print_int("index", stg->index);
     if (fmt_ctx->iformat->flags & AVFMT_SHOW_IDS)
-        print_fmt("id", "0x%" PRIx64, stg->id);
+        print_fmt("id", "0x%lld", stg->id);
     else
         print_str_opt("id", "N/A");
     print_int("nb_streams", stg->nb_streams);

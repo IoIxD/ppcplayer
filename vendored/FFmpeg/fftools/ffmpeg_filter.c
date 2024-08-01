@@ -2520,7 +2520,7 @@ finish:
         av_log(ofp, AV_LOG_VERBOSE, "*** %lld dup!\n", *nb_frames - 1);
         if (nb_frames_dup > fps->dup_warning)
         {
-            av_log(ofp, AV_LOG_WARNING, "More than %" PRIu64 " frames duplicated\n", fps->dup_warning);
+            av_log(ofp, AV_LOG_WARNING, "More than %ulld frames duplicated\n", fps->dup_warning);
             fps->dup_warning *= 10;
         }
     }

@@ -348,7 +348,7 @@ static void dump_cpb(void *ctx, const AVPacketSideData *sd, int log_level)
     if (cpb->vbv_delay == UINT64_MAX)
         av_log(ctx, log_level, "vbv_delay: N/A");
     else
-        av_log(ctx, log_level, "vbv_delay: %" PRIu64 "", cpb->vbv_delay);
+        av_log(ctx, log_level, "vbv_delay: %ulld", cpb->vbv_delay);
 }
 
 static void dump_mastering_display_metadata(void *ctx, const AVPacketSideData *sd,
@@ -721,7 +721,7 @@ static void dump_stream_group(const AVFormatContext *ic, uint8_t *printed,
 
     av_log(NULL, AV_LOG_INFO, "  Stream group #%d:%d", index, i);
     if (flags & AVFMT_SHOW_IDS)
-        av_log(NULL, AV_LOG_INFO, "[0x%" PRIx64 "]", stg->id);
+        av_log(NULL, AV_LOG_INFO, "[0x%lld]", stg->id);
     av_log(NULL, AV_LOG_INFO, ":");
 
     switch (stg->type)
@@ -780,7 +780,7 @@ static void dump_stream_group(const AVFormatContext *ic, uint8_t *printed,
                     av_log(NULL, AV_LOG_INFO, "      IAMF Audio Element #%d:%d",
                            index, audio_element->index);
                     if (flags & AVFMT_SHOW_IDS)
-                        av_log(NULL, AV_LOG_INFO, "[0x%" PRIx64 "]", audio_element->id);
+                        av_log(NULL, AV_LOG_INFO, "[0x%lld]", audio_element->id);
                     av_log(NULL, AV_LOG_INFO, "\n");
                     dump_dictionary(NULL, submix_element->annotations, "Annotations", "        ", AV_LOG_INFO);
                 }

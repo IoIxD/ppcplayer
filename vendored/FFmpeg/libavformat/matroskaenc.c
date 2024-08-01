@@ -1108,7 +1108,7 @@ static int put_flac_codecpriv(AVFormatContext *s, AVIOContext *pb,
         uint8_t buf[32];
         int64_t len;
 
-        snprintf(buf, sizeof(buf), "0x%" PRIx64, par->ch_layout.u.mask);
+        snprintf(buf, sizeof(buf), "0x%lld", par->ch_layout.u.mask);
         av_dict_set(&dict, "WAVEFORMATEXTENSIBLE_CHANNEL_MASK", buf, 0);
 
         len = ff_vorbiscomment_length(dict, vendor, NULL, 0);
@@ -2760,13 +2760,13 @@ static int mkv_write_info(AVFormatContext *s)
         {
             int64_t scaledDuration = av_rescale(s->duration, 1000, AV_TIME_BASE);
             put_ebml_float(pb, MATROSKA_ID_DURATION, scaledDuration);
-            av_log(s, AV_LOG_DEBUG, "Write early duration from recording time = %" PRIu64 "\n", scaledDuration);
+            av_log(s, AV_LOG_DEBUG, "Write early duration from recording time = %ulld\n", scaledDuration);
         }
         else if (metadata_duration > 0)
         {
             int64_t scaledDuration = av_rescale(metadata_duration, 1000, AV_TIME_BASE);
             put_ebml_float(pb, MATROSKA_ID_DURATION, scaledDuration);
-            av_log(s, AV_LOG_DEBUG, "Write early duration from metadata = %" PRIu64 "\n", scaledDuration);
+            av_log(s, AV_LOG_DEBUG, "Write early duration from metadata = %ulld\n", scaledDuration);
         }
         else if (s->pb->seekable & AVIO_SEEKABLE_NORMAL)
         {
@@ -3387,7 +3387,7 @@ static int mkv_write_flush_packet(AVFormatContext *s, AVPacket *pkt)
             if (ret < 0)
                 return ret;
             av_log(s, AV_LOG_DEBUG,
-                   "Flushing cluster at offset %" PRIu64 " bytes\n",
+                   "Flushing cluster at offset %ulld bytes\n",
                    avio_tell(s->pb));
         }
         return 1;
@@ -3465,7 +3465,7 @@ static int mkv_write_trailer(AVFormatContext *s)
                 }
                 av_log(s, AV_LOG_WARNING,
                        "Insufficient space reserved for Cues: "
-                       "%d < %" PRIu64 ". No Cues will be output.\n",
+                       "%d < %ulld. No Cues will be output.\n",
                        mkv->reserve_cues_space, size);
                 ret2 = AVERROR(EINVAL);
                 goto after_cues;
@@ -3530,7 +3530,7 @@ after_cues:
     if (mkv->info.bc)
     {
         // update the duration
-        av_log(s, AV_LOG_DEBUG, "end duration = %" PRIu64 "\n", mkv->duration);
+        av_log(s, AV_LOG_DEBUG, "end duration = %ulld\n", mkv->duration);
         avio_seek(mkv->info.bc, mkv->duration_offset, SEEK_SET);
         put_ebml_float(mkv->info.bc, MATROSKA_ID_DURATION, mkv->duration);
         ret = end_ebml_master_crc32(pb, &mkv->info.bc, mkv,
@@ -3595,7 +3595,7 @@ after_cues:
                 char duration_string[DURATION_STRING_LENGTH + 1] = "";
                 ebml_master simpletag;
 
-                av_log(s, AV_LOG_DEBUG, "stream %d end duration = %" PRIu64 "\n", i,
+                av_log(s, AV_LOG_DEBUG, "stream %d end duration = %ulld\n", i,
                        track->duration);
 
                 avio_seek(tags_bc, track->duration_offset, SEEK_SET);

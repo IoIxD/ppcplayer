@@ -177,8 +177,8 @@ void audio_callback(void *buffer, unsigned int frames)
 
 int main()
 {
-    char * buf;
-    scanf("%s",buf);
+    char *buf;
+    scanf("%s", buf);
     // int screenWidth = 1280;
     // int screenHeight = 720;
 

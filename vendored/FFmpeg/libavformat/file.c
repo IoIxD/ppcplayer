@@ -196,25 +196,7 @@ static int file_check(URLContext *h, int mask)
 #if CONFIG_FD_PROTOCOL || CONFIG_PIPE_PROTOCOL
 static int fd_dup(URLContext *h, int oldfd)
 {
-    int newfd;
-
-#ifdef F_DUPFD_CLOEXEC
-    newfd = fcntl(oldfd, F_DUPFD_CLOEXEC, 0);
-#else
-    newfd = dup(oldfd);
-#endif
-    if (newfd == -1)
-        return newfd;
-
-#if HAVE_FCNTL
-    if (fcntl(newfd, F_SETFD, FD_CLOEXEC) == -1)
-        av_log(h, AV_LOG_DEBUG, "Failed to set close on exec\n");
-#endif
-
-#if HAVE_SETMODE
-    setmode(newfd, O_BINARY);
-#endif
-    return newfd;
+	return -1;
 }
 #endif
 
@@ -246,25 +228,7 @@ static int64_t file_seek(URLContext *h, int64_t pos, int whence)
 
 static int file_delete(URLContext *h)
 {
-#if HAVE_UNISTD_H
-    int ret;
-    const char *filename = h->filename;
-    av_strstart(filename, "file:", &filename);
-
-    ret = rmdir(filename);
-    if (ret < 0 && (errno == ENOTDIR
-#   ifdef _WIN32
-        || errno == EINVAL
-#   endif
-        ))
-        ret = unlink(filename);
-    if (ret < 0)
-        return AVERROR(errno);
-
-    return ret;
-#else
     return AVERROR(ENOSYS);
-#endif /* HAVE_UNISTD_H */
 }
 
 static int file_move(URLContext *h_src, URLContext *h_dst)

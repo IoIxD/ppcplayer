@@ -55,7 +55,7 @@ static int64_t read_ts(char **line, int *duration)
 {
     int64_t start, end;
 
-    if (sscanf(*line, "%lld,%" SCNd64, &start, &end) == 2)
+    if (sscanf(*line, "%lld,%lld", &start, &end) == 2)
     {
         *line += strcspn(*line, "\"");
         *line += !!**line;

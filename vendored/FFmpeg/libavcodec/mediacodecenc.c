@@ -497,7 +497,7 @@ static int mediacodec_receive(AVCodecContext *avctx, AVPacket *pkt)
         pkt->flags |= AV_PKT_FLAG_KEY;
     ret = 0;
 
-    av_log(avctx, AV_LOG_TRACE, "receive packet pts %lld dts %" PRId64 " flags %d extradata %d\n",
+    av_log(avctx, AV_LOG_TRACE, "receive packet pts %lld dts %lld flags %d extradata %d\n",
            pkt->pts, pkt->dts, pkt->flags, extradata_size);
 
 bailout:

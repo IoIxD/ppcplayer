@@ -661,7 +661,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
                     char *downmix_layout = av_mallocz(19);
                     if (!downmix_layout)
                         error("Failed memory allocation");
-                    av_strlcatf(downmix_layout, 19, "0x%" PRIx64, request_channel_layout & ~INT64_MIN);
+                    av_strlcatf(downmix_layout, 19, "0x%lld", request_channel_layout & ~INT64_MIN);
                     av_dict_set(&opts, "downmix", downmix_layout, AV_DICT_DONT_STRDUP_VAL);
                 }
                 if (ctx->codec_id != AV_CODEC_ID_DTS)

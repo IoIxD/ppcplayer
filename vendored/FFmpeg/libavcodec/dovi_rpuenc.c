@@ -31,25 +31,26 @@
 #include "put_golomb.h"
 #include "refstruct.h"
 
-static struct {
+static struct
+{
     uint64_t pps; // maximum pixels per second
-    int width; // maximum width
-    int main; // maximum bitrate in main tier
-    int high; // maximum bitrate in high tier
+    int width;    // maximum width
+    int main;     // maximum bitrate in main tier
+    int high;     // maximum bitrate in high tier
 } dv_levels[] = {
-     [1] = {1280*720*24,    1280,  20,  50},
-     [2] = {1280*720*30,    1280,  20,  50},
-     [3] = {1920*1080*24,   1920,  20,  70},
-     [4] = {1920*1080*30,   2560,  20,  70},
-     [5] = {1920*1080*60,   3840,  20,  70},
-     [6] = {3840*2160*24,   3840,  25, 130},
-     [7] = {3840*2160*30,   3840,  25, 130},
-     [8] = {3840*2160*48,   3840,  40, 130},
-     [9] = {3840*2160*60,   3840,  40, 130},
-    [10] = {3840*2160*120,  3840,  60, 240},
-    [11] = {3840*2160*120,  7680,  60, 240},
-    [12] = {7680*4320*60,   7680, 120, 450},
-    [13] = {7680*4320*120u, 7680, 240, 800},
+    [1] = {1280 * 720 * 24, 1280, 20, 50},
+    [2] = {1280 * 720 * 30, 1280, 20, 50},
+    [3] = {1920 * 1080 * 24, 1920, 20, 70},
+    [4] = {1920 * 1080 * 30, 2560, 20, 70},
+    [5] = {1920 * 1080 * 60, 3840, 20, 70},
+    [6] = {3840 * 2160 * 24, 3840, 25, 130},
+    [7] = {3840 * 2160 * 30, 3840, 25, 130},
+    [8] = {3840 * 2160 * 48, 3840, 40, 130},
+    [9] = {3840 * 2160 * 60, 3840, 40, 130},
+    [10] = {3840 * 2160 * 120, 3840, 60, 240},
+    [11] = {3840 * 2160 * 120, 7680, 60, 240},
+    [12] = {7680 * 4320 * 60, 7680, 120, 450},
+    [13] = {7680 * 4320 * 120u, 7680, 240, 800},
 };
 
 int ff_dovi_configure(DOVIContext *s, AVCodecContext *avctx)
@@ -68,39 +69,54 @@ int ff_dovi_configure(DOVIContext *s, AVCodecContext *avctx)
                                 avctx->nb_decoded_side_data, AV_FRAME_DATA_DOVI_METADATA);
 
     if (sd)
-        hdr = av_dovi_get_header((const AVDOVIMetadata *) sd->data);
+        hdr = av_dovi_get_header((const AVDOVIMetadata *)sd->data);
 
     if (s->enable == FF_DOVI_AUTOMATIC && !hdr)
         goto skip;
 
-    switch (avctx->codec_id) {
-    case AV_CODEC_ID_AV1:  dv_profile = 10; break;
-    case AV_CODEC_ID_H264: dv_profile = 9;  break;
-    case AV_CODEC_ID_HEVC: dv_profile = hdr ? ff_dovi_guess_profile_hevc(hdr) : 8; break;
+    switch (avctx->codec_id)
+    {
+    case AV_CODEC_ID_AV1:
+        dv_profile = 10;
+        break;
+    case AV_CODEC_ID_H264:
+        dv_profile = 9;
+        break;
+    case AV_CODEC_ID_HEVC:
+        dv_profile = hdr ? ff_dovi_guess_profile_hevc(hdr) : 8;
+        break;
     default:
         /* No other encoder should be calling this! */
         av_assert0(0);
         return AVERROR_BUG;
     }
 
-    if (avctx->strict_std_compliance > FF_COMPLIANCE_UNOFFICIAL) {
-        if (dv_profile == 9) {
+    if (avctx->strict_std_compliance > FF_COMPLIANCE_UNOFFICIAL)
+    {
+        if (dv_profile == 9)
+        {
             if (avctx->pix_fmt != AV_PIX_FMT_YUV420P)
                 dv_profile = 0;
-        } else {
+        }
+        else
+        {
             if (avctx->pix_fmt != AV_PIX_FMT_YUV420P10)
                 dv_profile = 0;
         }
     }
 
-    switch (dv_profile) {
+    switch (dv_profile)
+    {
     case 4: /* HEVC with enhancement layer */
     case 7:
-        if (s->enable > 0) {
+        if (s->enable > 0)
+        {
             av_log(s->logctx, AV_LOG_ERROR, "Coding of Dolby Vision enhancement "
-                   "layers is currently unsupported.");
+                                            "layers is currently unsupported.");
             return AVERROR_PATCHWELCOME;
-        } else {
+        }
+        else
+        {
             goto skip;
         }
     case 5: /* HEVC with proprietary IPTPQc2 */
@@ -108,7 +124,8 @@ int ff_dovi_configure(DOVIContext *s, AVCodecContext *avctx)
         break;
     case 10:
         /* FIXME: check for proper H.273 tags once those are added */
-        if (hdr && hdr->bl_video_full_range_flag) {
+        if (hdr && hdr->bl_video_full_range_flag)
+        {
             /* AV1 with proprietary IPTPQc2 */
             bl_compat_id = 0;
             break;
@@ -117,38 +134,49 @@ int ff_dovi_configure(DOVIContext *s, AVCodecContext *avctx)
     case 8: /* HEVC (or AV1) with BL compatibility */
         if (avctx->colorspace == AVCOL_SPC_BT2020_NCL &&
             avctx->color_primaries == AVCOL_PRI_BT2020 &&
-            avctx->color_trc == AVCOL_TRC_SMPTE2084) {
+            avctx->color_trc == AVCOL_TRC_SMPTE2084)
+        {
             bl_compat_id = 1;
-        } else if (avctx->colorspace == AVCOL_SPC_BT2020_NCL &&
-                   avctx->color_primaries == AVCOL_PRI_BT2020 &&
-                   avctx->color_trc == AVCOL_TRC_ARIB_STD_B67) {
+        }
+        else if (avctx->colorspace == AVCOL_SPC_BT2020_NCL &&
+                 avctx->color_primaries == AVCOL_PRI_BT2020 &&
+                 avctx->color_trc == AVCOL_TRC_ARIB_STD_B67)
+        {
             bl_compat_id = 4;
-        } else if (avctx->colorspace == AVCOL_SPC_BT709 &&
-                   avctx->color_primaries == AVCOL_PRI_BT709 &&
-                   avctx->color_trc == AVCOL_TRC_BT709) {
+        }
+        else if (avctx->colorspace == AVCOL_SPC_BT709 &&
+                 avctx->color_primaries == AVCOL_PRI_BT709 &&
+                 avctx->color_trc == AVCOL_TRC_BT709)
+        {
             bl_compat_id = 2;
         }
     }
 
-    if (!dv_profile || bl_compat_id < 0) {
-        if (s->enable > 0) {
+    if (!dv_profile || bl_compat_id < 0)
+    {
+        if (s->enable > 0)
+        {
             av_log(s->logctx, AV_LOG_ERROR, "Dolby Vision enabled, but could "
-                   "not determine profile and compatibility mode. Double-check "
-                   "colorspace and format settings for compatibility?\n");
+                                            "not determine profile and compatibility mode. Double-check "
+                                            "colorspace and format settings for compatibility?\n");
             return AVERROR(EINVAL);
         }
         goto skip;
     }
 
     pps = avctx->width * avctx->height;
-    if (avctx->framerate.num) {
+    if (avctx->framerate.num)
+    {
         pps = pps * avctx->framerate.num / avctx->framerate.den;
-    } else {
+    }
+    else
+    {
         pps *= 25; /* sanity fallback */
     }
 
     dv_level = 0;
-    for (int i = 1; i < FF_ARRAY_ELEMS(dv_levels); i++) {
+    for (int i = 1; i < FF_ARRAY_ELEMS(dv_levels); i++)
+    {
         if (pps > dv_levels[i].pps)
             continue;
         if (avctx->width > dv_levels[i].width)
@@ -161,15 +189,21 @@ int ff_dovi_configure(DOVIContext *s, AVCodecContext *avctx)
         break;
     }
 
-    if (!dv_level) {
-        if (avctx->strict_std_compliance >= FF_COMPLIANCE_STRICT) {
-            av_log(s->logctx, AV_LOG_ERROR, "Coded PPS (%"PRIu64") and width (%d) "
-                   "exceed Dolby Vision limitations\n", pps, avctx->width);
+    if (!dv_level)
+    {
+        if (avctx->strict_std_compliance >= FF_COMPLIANCE_STRICT)
+        {
+            av_log(s->logctx, AV_LOG_ERROR, "Coded PPS (%ulld) and width (%d) "
+                                            "exceed Dolby Vision limitations\n",
+                   pps, avctx->width);
             return AVERROR(EINVAL);
-        } else {
-            av_log(s->logctx, AV_LOG_WARNING, "Coded PPS (%"PRIu64") and width (%d) "
-                   "exceed Dolby Vision limitations. Ignoring, resulting file "
-                   "may be non-conforming.\n", pps, avctx->width);
+        }
+        else
+        {
+            av_log(s->logctx, AV_LOG_WARNING, "Coded PPS (%ulld) and width (%d) "
+                                              "exceed Dolby Vision limitations. Ignoring, resulting file "
+                                              "may be non-conforming.\n",
+                   pps, avctx->width);
             dv_level = FF_ARRAY_ELEMS(dv_levels) - 1;
         }
     }
@@ -179,7 +213,8 @@ int ff_dovi_configure(DOVIContext *s, AVCodecContext *avctx)
         return AVERROR(ENOMEM);
 
     if (!av_packet_side_data_add(&avctx->coded_side_data, &avctx->nb_coded_side_data,
-                                 AV_PKT_DATA_DOVI_CONF, cfg, cfg_size, 0)) {
+                                 AV_PKT_DATA_DOVI_CONF, cfg, cfg_size, 0))
+    {
         av_free(cfg);
         return AVERROR(ENOMEM);
     }
@@ -197,23 +232,28 @@ int ff_dovi_configure(DOVIContext *s, AVCodecContext *avctx)
     return 0;
 
 skip:
-    s->cfg = (AVDOVIDecoderConfigurationRecord) {0};
+    s->cfg = (AVDOVIDecoderConfigurationRecord){0};
     return 0;
 }
 
 static inline void put_ue_coef(PutBitContext *pb, const AVDOVIRpuDataHeader *hdr,
                                uint64_t coef)
 {
-    union { uint32_t u32; float f32; } fpart;
+    union
+    {
+        uint32_t u32;
+        float f32;
+    } fpart;
 
-    switch (hdr->coef_data_type) {
+    switch (hdr->coef_data_type)
+    {
     case RPU_COEFF_FIXED:
         set_ue_golomb(pb, coef >> hdr->coef_log2_denom);
         put_bits64(pb, hdr->coef_log2_denom,
                    coef & ((1LL << hdr->coef_log2_denom) - 1));
         break;
     case RPU_COEFF_FLOAT:
-        fpart.f32 = coef / (float) (1LL << hdr->coef_log2_denom);
+        fpart.f32 = coef / (float)(1LL << hdr->coef_log2_denom);
         put_bits64(pb, hdr->coef_log2_denom, fpart.u32);
         break;
     }
@@ -222,16 +262,21 @@ static inline void put_ue_coef(PutBitContext *pb, const AVDOVIRpuDataHeader *hdr
 static inline void put_se_coef(PutBitContext *pb, const AVDOVIRpuDataHeader *hdr,
                                uint64_t coef)
 {
-    union { uint32_t u32; float f32; } fpart;
+    union
+    {
+        uint32_t u32;
+        float f32;
+    } fpart;
 
-    switch (hdr->coef_data_type) {
+    switch (hdr->coef_data_type)
+    {
     case RPU_COEFF_FIXED:
         set_se_golomb(pb, coef >> hdr->coef_log2_denom);
         put_bits64(pb, hdr->coef_log2_denom,
                    coef & ((1LL << hdr->coef_log2_denom) - 1));
         break;
     case RPU_COEFF_FLOAT:
-        fpart.f32 = coef / (float) (1LL << hdr->coef_log2_denom);
+        fpart.f32 = coef / (float)(1LL << hdr->coef_log2_denom);
         put_bits64(pb, hdr->coef_log2_denom, fpart.u32);
         break;
     }
@@ -249,21 +294,36 @@ static void generate_ext_v1(PutBitContext *pb, const AVDOVIDmData *dm)
 {
     int ext_block_length, start_pos, pad_bits;
 
-    switch (dm->level) {
-    case 1:   ext_block_length = 5;  break;
-    case 2:   ext_block_length = 11; break;
-    case 4:   ext_block_length = 3;  break;
-    case 5:   ext_block_length = 7;  break;
-    case 6:   ext_block_length = 8;  break;
-    case 255: ext_block_length = 6;  break;
-    default: return;
+    switch (dm->level)
+    {
+    case 1:
+        ext_block_length = 5;
+        break;
+    case 2:
+        ext_block_length = 11;
+        break;
+    case 4:
+        ext_block_length = 3;
+        break;
+    case 5:
+        ext_block_length = 7;
+        break;
+    case 6:
+        ext_block_length = 8;
+        break;
+    case 255:
+        ext_block_length = 6;
+        break;
+    default:
+        return;
     }
 
     set_ue_golomb(pb, ext_block_length);
     put_bits(pb, 8, dm->level);
     start_pos = put_bits_count(pb);
 
-    switch (dm->level) {
+    switch (dm->level)
+    {
     case 1:
         put_bits(pb, 12, dm->l1.min_pq);
         put_bits(pb, 12, dm->l1.max_pq);
@@ -323,45 +383,69 @@ static void generate_ext_v2(PutBitContext *pb, const AVDOVIDmData *dm)
 {
     int ext_block_length, start_pos, pad_bits;
 
-    switch (dm->level) {
-    case 3: ext_block_length = 5; break;
+    switch (dm->level)
+    {
+    case 3:
+        ext_block_length = 5;
+        break;
     case 8:
-        if (ANY6(dm->l8.hue_vector_field)) {
+        if (ANY6(dm->l8.hue_vector_field))
+        {
             ext_block_length = 25;
-        } else if (ANY6(dm->l8.saturation_vector_field)) {
+        }
+        else if (ANY6(dm->l8.saturation_vector_field))
+        {
             ext_block_length = 19;
-        } else if (dm->l8.clip_trim) {
+        }
+        else if (dm->l8.clip_trim)
+        {
             ext_block_length = 13;
-        } else if (dm->l8.target_mid_contrast) {
+        }
+        else if (dm->l8.target_mid_contrast)
+        {
             ext_block_length = 12;
-        } else {
+        }
+        else
+        {
             ext_block_length = 10;
         }
         break;
     case 9:
-        if (ANY_CSP(dm->l9.source_display_primaries)) {
+        if (ANY_CSP(dm->l9.source_display_primaries))
+        {
             ext_block_length = 17;
-        } else {
+        }
+        else
+        {
             ext_block_length = 1;
         }
         break;
     case 10:
-        if (ANY_CSP(dm->l10.target_display_primaries)) {
+        if (ANY_CSP(dm->l10.target_display_primaries))
+        {
             ext_block_length = 21;
-        } else {
+        }
+        else
+        {
             ext_block_length = 5;
         }
         break;
-    case 11:  ext_block_length = 4; break;
-    case 254: ext_block_length = 2; break;
-    default: return;
+    case 11:
+        ext_block_length = 4;
+        break;
+    case 254:
+        ext_block_length = 2;
+        break;
+    default:
+        return;
     }
 
     set_ue_golomb(pb, ext_block_length);
     put_bits(pb, 8, dm->level);
     start_pos = put_bits_count(pb);
 
-    switch (dm->level) {
+    switch (dm->level)
+    {
     case 3:
         put_bits(pb, 12, dm->l3.min_pq_offset);
         put_bits(pb, 12, dm->l3.max_pq_offset);
@@ -446,7 +530,8 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
     int num_ext_blocks_v1, num_ext_blocks_v2;
     uint32_t crc;
     uint8_t *dst;
-    if (!metadata) {
+    if (!metadata)
+    {
         *out_rpu = NULL;
         *out_size = 0;
         return 0;
@@ -457,32 +542,40 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
     color = av_dovi_get_color(metadata);
     av_assert0(s->cfg.dv_profile);
 
-    if (hdr->rpu_type != 2) {
-        av_log(s->logctx, AV_LOG_ERROR, "Unhandled RPU type %"PRIu8"\n",
+    if (hdr->rpu_type != 2)
+    {
+        av_log(s->logctx, AV_LOG_ERROR, "Unhandled RPU type %" PRIu8 "\n",
                hdr->rpu_type);
         return AVERROR_INVALIDDATA;
     }
 
     vdr_rpu_id = -1;
-    for (int i = 0; i <= DOVI_MAX_DM_ID; i++) {
-        if (s->vdr[i] && !memcmp(s->vdr[i], mapping, sizeof(*mapping))) {
+    for (int i = 0; i <= DOVI_MAX_DM_ID; i++)
+    {
+        if (s->vdr[i] && !memcmp(s->vdr[i], mapping, sizeof(*mapping)))
+        {
             vdr_rpu_id = i;
             break;
-        } else if (vdr_rpu_id < 0 && (!s->vdr[i] || i == DOVI_MAX_DM_ID)) {
+        }
+        else if (vdr_rpu_id < 0 && (!s->vdr[i] || i == DOVI_MAX_DM_ID))
+        {
             vdr_rpu_id = i;
         }
     }
 
-    if (!s->vdr[vdr_rpu_id]) {
+    if (!s->vdr[vdr_rpu_id])
+    {
         s->vdr[vdr_rpu_id] = ff_refstruct_allocz(sizeof(AVDOVIDataMapping));
         if (!s->vdr[vdr_rpu_id])
             return AVERROR(ENOMEM);
     }
 
     num_ext_blocks_v1 = num_ext_blocks_v2 = 0;
-    for (int i = 0; i < metadata->num_ext_blocks; i++) {
+    for (int i = 0; i < metadata->num_ext_blocks; i++)
+    {
         const AVDOVIDmData *dm = av_dovi_get_ext(metadata, i);
-        switch (dm->level) {
+        switch (dm->level)
+        {
         case 1:
         case 2:
         case 4:
@@ -511,7 +604,8 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
     if (num_ext_blocks_v1 || num_ext_blocks_v2)
         vdr_dm_metadata_present = 1;
 
-    if (vdr_dm_metadata_present && !s->dm) {
+    if (vdr_dm_metadata_present && !s->dm)
+    {
         s->dm = ff_refstruct_allocz(sizeof(AVDOVIColorMetadata));
         if (!s->dm)
             return AVERROR(ENOMEM);
@@ -520,13 +614,21 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
     buffer_size = 12 /* vdr seq info */ + 5 /* CRC32 + terminator */;
     buffer_size += num_ext_blocks_v1 * 13;
     buffer_size += num_ext_blocks_v2 * 28;
-    if (!use_prev_vdr_rpu) {
+    if (!use_prev_vdr_rpu)
+    {
         buffer_size += 160;
-        for (int c = 0; c < 3; c++) {
-            for (int i = 0; i < mapping->curves[c].num_pivots - 1; i++) {
-                switch (mapping->curves[c].mapping_idc[i]) {
-                case AV_DOVI_MAPPING_POLYNOMIAL: buffer_size += 26;  break;
-                case AV_DOVI_MAPPING_MMR:        buffer_size += 177; break;
+        for (int c = 0; c < 3; c++)
+        {
+            for (int i = 0; i < mapping->curves[c].num_pivots - 1; i++)
+            {
+                switch (mapping->curves[c].mapping_idc[i])
+                {
+                case AV_DOVI_MAPPING_POLYNOMIAL:
+                    buffer_size += 26;
+                    break;
+                case AV_DOVI_MAPPING_MMR:
+                    buffer_size += 177;
+                    break;
                 }
             }
         }
@@ -551,7 +653,8 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
         set_ue_golomb(pb, hdr->coef_log2_denom);
     put_bits(pb, 2, hdr->vdr_rpu_normalized_idc);
     put_bits(pb, 1, hdr->bl_video_full_range_flag);
-    if ((hdr->rpu_format & 0x700) == 0) {
+    if ((hdr->rpu_format & 0x700) == 0)
+    {
         int ext_mapping_idc = (hdr->ext_mapping_idc_5_7 << 5) | hdr->ext_mapping_idc_0_4;
         set_ue_golomb(pb, hdr->bl_bit_depth - 8);
         set_ue_golomb(pb, (ext_mapping_idc << 8) | (hdr->el_bit_depth - 8));
@@ -570,20 +673,24 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
 
     profile = s->cfg.dv_profile ? s->cfg.dv_profile : ff_dovi_guess_profile_hevc(hdr);
 
-    if (!use_prev_vdr_rpu) {
+    if (!use_prev_vdr_rpu)
+    {
         set_ue_golomb(pb, mapping->mapping_color_space);
         set_ue_golomb(pb, mapping->mapping_chroma_format_idc);
-        for (int c = 0; c < 3; c++) {
+        for (int c = 0; c < 3; c++)
+        {
             const AVDOVIReshapingCurve *curve = &mapping->curves[c];
             int prev = 0;
             set_ue_golomb(pb, curve->num_pivots - 2);
-            for (int i = 0; i < curve->num_pivots; i++) {
+            for (int i = 0; i < curve->num_pivots; i++)
+            {
                 put_bits(pb, hdr->bl_bit_depth, curve->pivots[i] - prev);
                 prev = curve->pivots[i];
             }
         }
 
-        if (mapping->nlq_method_idc != AV_DOVI_NLQ_NONE) {
+        if (mapping->nlq_method_idc != AV_DOVI_NLQ_NONE)
+        {
             put_bits(pb, 3, mapping->nlq_method_idc);
             put_bits(pb, hdr->bl_bit_depth, mapping->nlq_pivots[0]);
             put_bits(pb, hdr->bl_bit_depth, mapping->nlq_pivots[1] - mapping->nlq_pivots[0]);
@@ -592,12 +699,16 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
         set_ue_golomb(pb, mapping->num_x_partitions - 1);
         set_ue_golomb(pb, mapping->num_y_partitions - 1);
 
-        for (int c = 0; c < 3; c++) {
+        for (int c = 0; c < 3; c++)
+        {
             const AVDOVIReshapingCurve *curve = &mapping->curves[c];
-            for (int i = 0; i < curve->num_pivots - 1; i++) {
+            for (int i = 0; i < curve->num_pivots - 1; i++)
+            {
                 set_ue_golomb(pb, curve->mapping_idc[i]);
-                switch (curve->mapping_idc[i]) {
-                case AV_DOVI_MAPPING_POLYNOMIAL: {
+                switch (curve->mapping_idc[i])
+                {
+                case AV_DOVI_MAPPING_POLYNOMIAL:
+                {
                     set_ue_golomb(pb, curve->poly_order[i] - 1);
                     if (curve->poly_order[i] == 1)
                         put_bits(pb, 1, 0); /* linear_interp_flag */
@@ -605,10 +716,12 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
                         put_se_coef(pb, hdr, curve->poly_coef[i][k]);
                     break;
                 }
-                case AV_DOVI_MAPPING_MMR: {
+                case AV_DOVI_MAPPING_MMR:
+                {
                     put_bits(pb, 2, curve->mmr_order[i] - 1);
                     put_se_coef(pb, hdr, curve->mmr_constant[i]);
-                    for (int j = 0; j < curve->mmr_order[i]; j++) {
+                    for (int j = 0; j < curve->mmr_order[i]; j++)
+                    {
                         for (int k = 0; k < 7; k++)
                             put_se_coef(pb, hdr, curve->mmr_coef[i][j][k]);
                     }
@@ -618,12 +731,15 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
             }
         }
 
-        if (mapping->nlq_method_idc != AV_DOVI_NLQ_NONE) {
-            for (int c = 0; c < 3; c++) {
+        if (mapping->nlq_method_idc != AV_DOVI_NLQ_NONE)
+        {
+            for (int c = 0; c < 3; c++)
+            {
                 const AVDOVINLQParams *nlq = &mapping->nlq[c];
                 put_bits(pb, hdr->el_bit_depth, nlq->nlq_offset);
                 put_ue_coef(pb, hdr, nlq->vdr_in_max);
-                switch (mapping->nlq_method_idc) {
+                switch (mapping->nlq_method_idc)
+                {
                 case AV_DOVI_NLQ_LINEAR_DZ:
                     put_ue_coef(pb, hdr, nlq->linear_deadzone_slope);
                     put_ue_coef(pb, hdr, nlq->linear_deadzone_threshold);
@@ -635,7 +751,8 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
         memcpy(s->vdr[vdr_rpu_id], mapping, sizeof(*mapping));
     }
 
-    if (vdr_dm_metadata_present) {
+    if (vdr_dm_metadata_present)
+    {
         const int denom = profile == 4 ? (1 << 30) : (1 << 28);
         set_ue_golomb(pb, color->dm_metadata_id); /* affected_dm_id */
         set_ue_golomb(pb, color->dm_metadata_id); /* current_dm_id */
@@ -667,13 +784,16 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
         for (int i = 0; i < metadata->num_ext_blocks; i++)
             generate_ext_v1(pb, av_dovi_get_ext(metadata, i));
 
-        if (num_ext_blocks_v2) {
+        if (num_ext_blocks_v2)
+        {
             set_ue_golomb(pb, num_ext_blocks_v2);
             align_put_bits(pb);
             for (int i = 0; i < metadata->num_ext_blocks; i++)
                 generate_ext_v2(pb, av_dovi_get_ext(metadata, i));
         }
-    } else {
+    }
+    else
+    {
         s->color = &ff_dovi_color_default;
         s->num_ext_blocks = 0;
     }
@@ -686,24 +806,28 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
     flush_put_bits(pb);
 
     rpu_size = put_bytes_output(pb);
-    switch (s->cfg.dv_profile) {
+    switch (s->cfg.dv_profile)
+    {
     case 10:
         /* AV1 uses T.35 OBU with EMDF header */
         *out_rpu = av_malloc(rpu_size + 15);
         if (!*out_rpu)
             return AVERROR(ENOMEM);
         init_put_bits(pb, *out_rpu, rpu_size + 15);
-        put_bits(pb,  8, ITU_T_T35_COUNTRY_CODE_US);
+        put_bits(pb, 8, ITU_T_T35_COUNTRY_CODE_US);
         put_bits(pb, 16, ITU_T_T35_PROVIDER_CODE_DOLBY);
-        put_bits32(pb, 0x800); /* provider_oriented_code */
+        put_bits32(pb, 0x800);         /* provider_oriented_code */
         put_bits(pb, 27, 0x01be6841u); /* fixed EMDF header, see above */
-        if (rpu_size > 0xFF) {
+        if (rpu_size > 0xFF)
+        {
             av_assert2(rpu_size <= 0x10000);
             put_bits(pb, 8, (rpu_size >> 8) - 1);
             put_bits(pb, 1, 1); /* read_more */
             put_bits(pb, 8, rpu_size & 0xFF);
             put_bits(pb, 1, 0);
-        } else {
+        }
+        else
+        {
             put_bits(pb, 8, rpu_size);
             put_bits(pb, 1, 0);
         }
@@ -723,15 +847,23 @@ int ff_dovi_rpu_generate(DOVIContext *s, const AVDOVIMetadata *metadata,
             return AVERROR(ENOMEM);
         *dst++ = 25; /* NAL prefix */
         zero_run = 0;
-        for (int i = 0; i < rpu_size; i++) {
-            if (zero_run < 2) {
-                if (s->rpu_buf[i] == 0) {
+        for (int i = 0; i < rpu_size; i++)
+        {
+            if (zero_run < 2)
+            {
+                if (s->rpu_buf[i] == 0)
+                {
                     zero_run++;
-                } else {
+                }
+                else
+                {
                     zero_run = 0;
                 }
-            } else {
-                if ((s->rpu_buf[i] & ~3) == 0) {
+            }
+            else
+            {
+                if ((s->rpu_buf[i] & ~3) == 0)
+                {
                     /* emulation prevention */
                     *dst++ = 3;
                 }

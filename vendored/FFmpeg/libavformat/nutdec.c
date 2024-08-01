@@ -817,7 +817,7 @@ static int find_and_decode_index(NUTContext *nut)
                 x >>= 1;
                 if (n + x >= syncpoint_count + 1)
                 {
-                    av_log(s, AV_LOG_ERROR, "index overflow A %d + %" PRIu64 " >= %d\n", n, x, syncpoint_count + 1);
+                    av_log(s, AV_LOG_ERROR, "index overflow A %d + %ulld >= %d\n", n, x, syncpoint_count + 1);
                     goto fail;
                 }
                 while (x--)
@@ -828,7 +828,7 @@ static int find_and_decode_index(NUTContext *nut)
             {
                 if (x <= 1)
                 {
-                    av_log(s, AV_LOG_ERROR, "index: x %" PRIu64 " is invalid\n", x);
+                    av_log(s, AV_LOG_ERROR, "index: x %ulld is invalid\n", x);
                     goto fail;
                 }
                 while (x != 1)
@@ -1031,7 +1031,7 @@ static int read_sm_data(AVFormatContext *s, AVIOContext *bc, AVPacket *pkt, int 
             {
                 dst = av_packet_new_side_data(pkt, AV_PKT_DATA_NEW_EXTRADATA, value_len);
             }
-            else if (sscanf(name, "CodecSpecificSide%" SCNd64 "", &v64) == 1)
+            else if (sscanf(name, "CodecSpecificSide%lld", &v64) == 1)
             {
                 dst = av_packet_new_side_data(pkt, AV_PKT_DATA_MATROSKA_BLOCKADDITIONAL, value_len + 8);
                 if (!dst)
@@ -1423,7 +1423,7 @@ static int read_seek(AVFormatContext *s, int stream_index,
     {
         av_tree_find(nut->syncpoints, &dummy, ff_nut_sp_pts_cmp,
                      (void **)next_node);
-        av_log(s, AV_LOG_DEBUG, "%" PRIu64 "-%" PRIu64 " %lld-%lld\n",
+        av_log(s, AV_LOG_DEBUG, "%ulld-%ulld %lld-%lld\n",
                next_node[0]->pos, next_node[1]->pos, next_node[0]->ts,
                next_node[1]->ts);
         pos = ff_gen_search(s, -1, dummy.ts, next_node[0]->pos,

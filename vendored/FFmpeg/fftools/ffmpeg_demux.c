@@ -872,23 +872,23 @@ static void demux_final_stats(Demuxer *d)
 
         av_log(f, AV_LOG_VERBOSE, "  Input stream #%d:%d (%s): ",
                f->index, j, av_get_media_type_string(type));
-        av_log(f, AV_LOG_VERBOSE, "%" PRIu64 " packets read (%" PRIu64 " bytes); ",
+        av_log(f, AV_LOG_VERBOSE, "%ulld packets read (%ulld bytes); ",
                ds->nb_packets, ds->data_size);
 
         if (ds->decoding_needed)
         {
             av_log(f, AV_LOG_VERBOSE,
-                   "%" PRIu64 " frames decoded; %" PRIu64 " decode errors",
+                   "%ulld frames decoded; %ulld decode errors",
                    ist->decoder->frames_decoded, ist->decoder->decode_errors);
             if (type == AVMEDIA_TYPE_AUDIO)
-                av_log(f, AV_LOG_VERBOSE, " (%" PRIu64 " samples)", ist->decoder->samples_decoded);
+                av_log(f, AV_LOG_VERBOSE, " (%ulld samples)", ist->decoder->samples_decoded);
             av_log(f, AV_LOG_VERBOSE, "; ");
         }
 
         av_log(f, AV_LOG_VERBOSE, "\n");
     }
 
-    av_log(f, AV_LOG_VERBOSE, "  Total: %" PRIu64 " packets (%" PRIu64 " bytes) demuxed\n",
+    av_log(f, AV_LOG_VERBOSE, "  Total: %ulld packets (%ulld bytes) demuxed\n",
            total_packets, total_size);
 }
 

@@ -544,7 +544,7 @@ static void get_tag(AVFormatContext *s, AVIOContext *pb, const char *key, int ty
         else if (!strcmp(key, "WM/WMRVBitrate"))
             snprintf(buf, sizeof(buf), "%f", av_int2double(num));
         else
-            snprintf(buf, sizeof(buf), "%" PRIi64, num);
+            snprintf(buf, sizeof(buf), "%lld", num);
     }
     else if (type == 5 && length == 2)
     {

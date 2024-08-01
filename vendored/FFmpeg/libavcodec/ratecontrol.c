@@ -652,7 +652,7 @@ av_cold int ff_rate_control_init(MpegEncContext *s)
             e += sscanf(p, " in:%*d out:%*d type:%d q:%f itex:%d ptex:%d "
                            "mv:%d misc:%d "
                            "fcode:%d bcode:%d "
-                           "mc-var:%" SCNd64 " var:%" SCNd64 " "
+                           "mc-var:%lld var:%lld "
                            "icount:%d hbits:%d",
                         &rce->pict_type, &rce->qscale, &rce->i_tex_bits, &rce->p_tex_bits,
                         &rce->mv_bits, &rce->misc_bits,

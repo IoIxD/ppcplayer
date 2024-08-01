@@ -1,0 +1,22 @@
+Here is one test method which checks that the encoder's
+view of decoded pictures in the same as the decoder's view.
+This ensures that there is no distortion besides what is
+inherently caused by compression.
+
+#1.Install and compile xavs :
+svn co https://xavs.svn.sourceforge.net/svnroot/xavs/trunk xavs 
+cd xavs
+./configure
+make
+cd ..
+
+2. use --dump-yuv option to dump the encoding reconstructed frames 
+example:
+Syntax: xavs [options] -o outfile infile [widthxheight]
+./xavs -B 400 -I 60 -b 2 --frames 200 --dump-yuv fenc.yuv 
+  -o test.avs football.qcif 176x144
+
+3. Install and compile AVS RM reference decoder :
+./ldecod test.avs  # this produces fdec.yuv
+
+4. Compare the fenc.yuv fdec.yuv 

@@ -1,0 +1,1 @@
+cmd='/home/gavin/Projects/os9ffmpegplayer/vendored/libxavs/configure;--prefix=/home/gavin/Projects/os9ffmpegplayer/lib;--disable-asm'

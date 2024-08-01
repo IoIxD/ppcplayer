@@ -23,7 +23,7 @@
  */
 
 #define MODPLUG_STATIC
-#include <libmodplug/modplug.h>
+#include "../../libmodplug/src/modplug.h"
 #include "libavutil/avstring.h"
 #include "libavutil/eval.h"
 #include "libavutil/mem.h"

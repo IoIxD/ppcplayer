@@ -3208,7 +3208,7 @@ static int mov_write_source_reference_tag(AVIOContext *pb, MOVTrack *track, cons
 
     if (str_size >= UINT16_MAX)
     {
-        av_log(NULL, AV_LOG_ERROR, "reel_name length %" PRIu64 " is too large\n", str_size);
+        av_log(NULL, AV_LOG_ERROR, "reel_name length %ulld is too large\n", str_size);
         avio_wb16(pb, 0);
         return AVERROR(EINVAL);
     }

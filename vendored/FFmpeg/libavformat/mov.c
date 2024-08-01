@@ -2162,7 +2162,7 @@ static int mov_read_moof(MOVContext *c, AVIOContext *pb, MOVAtom atom)
         }
     }
     c->fragment.moof_offset = c->fragment.implicit_offset = avio_tell(pb) - 8;
-    av_log(c->fc, AV_LOG_TRACE, "moof offset %" PRIx64 "\n", c->fragment.moof_offset);
+    av_log(c->fc, AV_LOG_TRACE, "moof offset %lld\n", c->fragment.moof_offset);
     c->frag_index.current = update_frag_index(c, c->fragment.moof_offset);
     return mov_read_default(c, pb, atom);
 }
@@ -5336,7 +5336,7 @@ static void mov_build_index(MOVContext *mov, AVStream *st)
                     e->size = sample_size;
                     e->min_distance = distance;
                     e->flags = keyframe ? AVINDEX_KEYFRAME : 0;
-                    av_log(mov->fc, AV_LOG_TRACE, "AVIndex stream %d, sample %u, offset %" PRIx64 ", dts %lld, "
+                    av_log(mov->fc, AV_LOG_TRACE, "AVIndex stream %d, sample %u, offset %lld, dts %lld, "
                                                   "size %u, distance %u, keyframe %d\n",
                            st->index, current_sample,
                            current_offset, current_dts, sample_size, distance, keyframe);
@@ -5474,7 +5474,7 @@ static void mov_build_index(MOVContext *mov, AVStream *st)
                 e->size = size;
                 e->min_distance = 0;
                 e->flags = AVINDEX_KEYFRAME;
-                av_log(mov->fc, AV_LOG_TRACE, "AVIndex stream %d, chunk %u, offset %" PRIx64 ", dts %lld, "
+                av_log(mov->fc, AV_LOG_TRACE, "AVIndex stream %d, chunk %u, offset %lld, dts %lld, "
                                               "size %u, duration %u\n",
                        st->index, i, current_offset, current_dts,
                        size, samples);
@@ -6574,9 +6574,9 @@ static int mov_read_trun(MOVContext *c, AVIOContext *pb, MOVAtom atom)
                 dts -= sc->time_offset;
             }
             av_log(c->fc, AV_LOG_DEBUG,
-                   "pts %lld calculated dts %" PRId64
+                   "pts %lld calculated dts %lld"
                    " sc->dts_shift %d ctts.duration %d"
-                   " sc->time_offset %" PRId64
+                   " sc->time_offset %lld"
                    " flags & MOV_TRUN_SAMPLE_CTS %d\n",
                    pts, dts,
                    sc->dts_shift, ctts_duration,
@@ -6610,7 +6610,7 @@ static int mov_read_trun(MOVContext *c, AVIOContext *pb, MOVAtom atom)
         sc->ctts_data[index_entry_pos].duration = ctts_duration;
         index_entry_pos++;
 
-        av_log(c->fc, AV_LOG_TRACE, "AVIndex stream %d, sample %d, offset %" PRIx64 ", dts %lld, "
+        av_log(c->fc, AV_LOG_TRACE, "AVIndex stream %d, sample %d, offset %lld, dts %lld, "
                                     "size %u, distance %d, keyframe %d\n",
                st->index,
                index_entry_pos, offset, dts, sample_size, distance, keyframe);
@@ -7467,7 +7467,7 @@ static int mov_read_vexu_proj(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 
     if (atom.size != 16)
     {
-        av_log(c->fc, AV_LOG_ERROR, "Invalid size for proj box: %" PRIu64 "\n", atom.size);
+        av_log(c->fc, AV_LOG_ERROR, "Invalid size for proj box: %ulld\n", atom.size);
         return AVERROR_INVALIDDATA;
     }
 
@@ -7784,7 +7784,7 @@ static int mov_read_hfov(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 
     if (atom.size != 4)
     {
-        av_log(c->fc, AV_LOG_ERROR, "Invalid size of hfov box: %" PRIu64 "\n", atom.size);
+        av_log(c->fc, AV_LOG_ERROR, "Invalid size of hfov box: %ulld\n", atom.size);
         return AVERROR_INVALIDDATA;
     }
 
@@ -11593,7 +11593,7 @@ static int mov_switch_root(AVFormatContext *s, int64_t target, int index)
         target = mov->frag_index.item[index].moof_offset;
     if (avio_seek(s->pb, target, SEEK_SET) != target)
     {
-        av_log(mov->fc, AV_LOG_ERROR, "root atom offset 0x%" PRIx64 ": partial file\n", target);
+        av_log(mov->fc, AV_LOG_ERROR, "root atom offset 0x%lld: partial file\n", target);
         return AVERROR_INVALIDDATA;
     }
 
@@ -11617,7 +11617,7 @@ static int mov_switch_root(AVFormatContext *s, int64_t target, int index)
         return ret;
     if (avio_feof(s->pb))
         return AVERROR_EOF;
-    av_log(s, AV_LOG_TRACE, "read fragments, offset 0x%" PRIx64 "\n", avio_tell(s->pb));
+    av_log(s, AV_LOG_TRACE, "read fragments, offset 0x%lld\n", avio_tell(s->pb));
 
     return 1;
 }
@@ -11770,7 +11770,7 @@ retry:
         int64_t ret64 = avio_seek(sc->pb, sample->pos, SEEK_SET);
         if (ret64 != sample->pos)
         {
-            av_log(mov->fc, AV_LOG_ERROR, "stream %d, offset 0x%" PRIx64 ": partial file\n",
+            av_log(mov->fc, AV_LOG_ERROR, "stream %d, offset 0x%lld: partial file\n",
                    sc->ffindex, sample->pos);
             if (should_retry(sc->pb, ret64))
             {

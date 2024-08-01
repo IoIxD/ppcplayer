@@ -5,6 +5,13 @@
     "fixed_dsp.h": "c",
     "cstdlib": "cpp",
     "chrono": "c",
-    "typeinfo": "c"
+    "typeinfo": "c",
+    "gme.h": "c",
+    "libopenmpt.h": "c",
+    "lame.h": "c",
+    "codec_internal.h": "c",
+    "*.ipp": "c",
+    "typeindex": "c",
+    "thread": "c"
   }
 }

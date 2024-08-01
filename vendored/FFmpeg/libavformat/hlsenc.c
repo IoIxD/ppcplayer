@@ -2067,7 +2067,7 @@ static int hls_start(AVFormatContext *s, VariantStream *vs)
         err = av_strlcpy(iv_string, vs->iv_string, sizeof(iv_string));
         if (!err)
         {
-            snprintf(iv_string, sizeof(iv_string), "%032" PRIx64, vs->sequence);
+            snprintf(iv_string, sizeof(iv_string), "%032ulld", vs->sequence);
             memset(vs->iv_string, 0, sizeof(vs->iv_string));
             memcpy(vs->iv_string, iv_string, sizeof(iv_string));
         }

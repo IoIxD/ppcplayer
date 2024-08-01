@@ -88,7 +88,7 @@ static av_cold void uninit(AVFilterContext *ctx)
 {
     VFRDETContext *s = ctx->priv;
 
-    av_log(ctx, AV_LOG_INFO, "VFR:%f (%" PRIu64 "/%" PRIu64 ")", s->vfr / (float)(s->vfr + s->cfr), s->vfr, s->cfr);
+    av_log(ctx, AV_LOG_INFO, "VFR:%f (%ulld/%ulld)", s->vfr / (float)(s->vfr + s->cfr), s->vfr, s->cfr);
     if (s->vfr)
         av_log(ctx, AV_LOG_INFO, " min: %lld max: %lld avg: %lld", s->min_delta, s->max_delta, s->avg_delta / s->vfr);
     av_log(ctx, AV_LOG_INFO, "\n");

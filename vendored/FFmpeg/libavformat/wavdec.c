@@ -297,7 +297,7 @@ static int wav_parse_bext_tag(AVFormatContext *s, int64_t size)
         return ret;
 
     time_reference = avio_rl64(s->pb);
-    snprintf(temp, sizeof(temp), "%" PRIu64, time_reference);
+    snprintf(temp, sizeof(temp), "%ulld", time_reference);
     if ((ret = av_dict_set(&s->metadata, "time_reference", temp, 0)) < 0)
         return ret;
 
@@ -315,7 +315,7 @@ static int wav_parse_bext_tag(AVFormatContext *s, int64_t size)
             {
                 /* basic UMID */
                 snprintf(temp, sizeof(temp),
-                         "0x%016" PRIX64 "%016" PRIX64 "%016" PRIX64 "%016" PRIX64,
+                         "0x%016ulld%016ulld%016ulld%016ulld",
                          umid_parts[0], umid_parts[1],
                          umid_parts[2], umid_parts[3]);
             }
@@ -323,8 +323,8 @@ static int wav_parse_bext_tag(AVFormatContext *s, int64_t size)
             {
                 /* extended UMID */
                 snprintf(temp, sizeof(temp),
-                         "0x%016" PRIX64 "%016" PRIX64 "%016" PRIX64 "%016" PRIX64
-                         "%016" PRIX64 "%016" PRIX64 "%016" PRIX64 "%016" PRIX64,
+                         "0x%016ulld%016ulld%016ulld%016ulld"
+                         "%016ulld%016ulld%016ulld%016ulld",
                          umid_parts[0], umid_parts[1],
                          umid_parts[2], umid_parts[3],
                          umid_parts[4], umid_parts[5],

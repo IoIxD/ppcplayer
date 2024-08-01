@@ -204,7 +204,7 @@ static int asf_read_unknown(AVFormatContext *s, const GUIDParseTable *g)
     {
         if (size < 24)
         {
-            av_log(s, AV_LOG_ERROR, "Too small size %" PRIu64 " (< 24).\n", size);
+            av_log(s, AV_LOG_ERROR, "Too small size %ulld (< 24).\n", size);
             return AVERROR_INVALIDDATA;
         }
         avio_skip(pb, size - 24);
@@ -370,7 +370,7 @@ static int asf_set_metadata(AVFormatContext *s, const uint8_t *name,
     if (ret < 0)
         return ret;
 
-    snprintf(buf, sizeof(buf), "%" PRIu64, value);
+    snprintf(buf, sizeof(buf), "%ulld", value);
     if (av_dict_set(met, name, buf, 0) < 0)
         av_log(s, AV_LOG_WARNING, "av_dict_set failed.\n");
 
@@ -903,7 +903,7 @@ static int asf_read_data(AVFormatContext *s, const GUIDParseTable *g)
     if (size != asf->nb_packets)
         av_log(s, AV_LOG_WARNING,
                "Number of Packets from File Properties Object is not equal to Total"
-               "Datapackets value! num of packets %" PRIu64 " total num %" PRIu64 ".\n",
+               "Datapackets value! num of packets %ulld total num %ulld.\n",
                size, asf->nb_packets);
     avio_skip(pb, 2); // skip reserved field
     asf->first_packet_offset = avio_tell(pb);

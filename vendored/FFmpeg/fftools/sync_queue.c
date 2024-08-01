@@ -67,25 +67,27 @@
  * frame from stream 1, and all 4 frames from stream 2.
  */
 
-typedef struct SyncQueueStream {
-    AVFifo          *fifo;
-    AVRational       tb;
+typedef struct SyncQueueStream
+{
+    AVFifo *fifo;
+    AVRational tb;
 
     /* number of audio samples in fifo */
-    uint64_t         samples_queued;
+    uint64_t samples_queued;
     /* stream head: largest timestamp seen */
-    int64_t          head_ts;
-    int              limiting;
+    int64_t head_ts;
+    int limiting;
     /* no more frames will be sent for this stream */
-    int              finished;
+    int finished;
 
-    uint64_t         frames_sent;
-    uint64_t         samples_sent;
-    uint64_t         frames_max;
-    int              frame_samples;
+    uint64_t frames_sent;
+    uint64_t samples_sent;
+    uint64_t frames_max;
+    int frame_samples;
 } SyncQueueStream;
 
-struct SyncQueue {
+struct SyncQueue
+{
     enum SyncQueueType type;
 
     void *logctx;
@@ -102,7 +104,7 @@ struct SyncQueue {
     int64_t buf_size_us;
 
     SyncQueueStream *streams;
-    unsigned int  nb_streams;
+    unsigned int nb_streams;
 
     // pool of preallocated frames to avoid constant allocations
     ObjPool *pool;
@@ -127,15 +129,14 @@ static void frame_move(const SyncQueue *sq, SyncQueueFrame dst,
  */
 static int64_t frame_end(const SyncQueue *sq, SyncQueueFrame frame, int nb_samples)
 {
-    if (nb_samples) {
-        int64_t d = av_rescale_q(nb_samples, (AVRational){ 1, frame.f->sample_rate},
+    if (nb_samples)
+    {
+        int64_t d = av_rescale_q(nb_samples, (AVRational){1, frame.f->sample_rate},
                                  frame.f->time_base);
         return frame.f->pts + d;
     }
 
-    return (sq->type == SYNC_QUEUE_PACKETS) ?
-           frame.p->pts + frame.p->duration :
-           frame.f->pts + frame.f->duration;
+    return (sq->type == SYNC_QUEUE_PACKETS) ? frame.p->pts + frame.p->duration : frame.f->pts + frame.f->duration;
 }
 
 static int frame_samples(const SyncQueue *sq, SyncQueueFrame frame)
@@ -151,8 +152,7 @@ static int frame_null(const SyncQueue *sq, SyncQueueFrame frame)
 static void tb_update(const SyncQueue *sq, SyncQueueStream *st,
                       const SyncQueueFrame frame)
 {
-    AVRational tb = (sq->type == SYNC_QUEUE_PACKETS) ?
-                    frame.p->time_base : frame.f->time_base;
+    AVRational tb = (sq->type == SYNC_QUEUE_PACKETS) ? frame.p->time_base : frame.f->time_base;
 
     av_assert0(tb.num > 0 && tb.den > 0);
 
@@ -179,22 +179,26 @@ static void finish_stream(SyncQueue *sq, unsigned int stream_idx)
 
     st->finished = 1;
 
-    if (st->limiting && st->head_ts != AV_NOPTS_VALUE) {
+    if (st->limiting && st->head_ts != AV_NOPTS_VALUE)
+    {
         /* check if this stream is the new finished head */
         if (sq->head_finished_stream < 0 ||
             av_compare_ts(st->head_ts, st->tb,
                           sq->streams[sq->head_finished_stream].head_ts,
-                          sq->streams[sq->head_finished_stream].tb) < 0) {
+                          sq->streams[sq->head_finished_stream].tb) < 0)
+        {
             sq->head_finished_stream = stream_idx;
         }
 
         /* mark as finished all streams that should no longer receive new frames,
          * due to them being ahead of some finished stream */
         st = &sq->streams[sq->head_finished_stream];
-        for (unsigned int i = 0; i < sq->nb_streams; i++) {
+        for (unsigned int i = 0; i < sq->nb_streams; i++)
+        {
             SyncQueueStream *st1 = &sq->streams[i];
             if (st != st1 && st1->head_ts != AV_NOPTS_VALUE &&
-                av_compare_ts(st->head_ts, st->tb, st1->head_ts, st1->tb) <= 0) {
+                av_compare_ts(st->head_ts, st->tb, st1->head_ts, st1->tb) <= 0)
+            {
                 if (!st1->finished)
                     av_log(sq->logctx, AV_LOG_DEBUG,
                            "sq: finish secondary %u; head ts %s\n", i,
@@ -206,7 +210,8 @@ static void finish_stream(SyncQueue *sq, unsigned int stream_idx)
     }
 
     /* mark the whole queue as finished if all streams are finished */
-    for (unsigned int i = 0; i < sq->nb_streams; i++) {
+    for (unsigned int i = 0; i < sq->nb_streams; i++)
+    {
         if (!sq->streams[i].finished)
             return;
     }
@@ -219,12 +224,14 @@ static void queue_head_update(SyncQueue *sq)
 {
     av_assert0(sq->have_limiting);
 
-    if (sq->head_stream < 0) {
+    if (sq->head_stream < 0)
+    {
         unsigned first_limiting = UINT_MAX;
 
         /* wait for one timestamp in each stream before determining
          * the queue head */
-        for (unsigned int i = 0; i < sq->nb_streams; i++) {
+        for (unsigned int i = 0; i < sq->nb_streams; i++)
+        {
             SyncQueueStream *st = &sq->streams[i];
             if (!st->limiting)
                 continue;
@@ -239,12 +246,13 @@ static void queue_head_update(SyncQueue *sq)
         sq->head_stream = first_limiting;
     }
 
-    for (unsigned int i = 0; i < sq->nb_streams; i++) {
-        SyncQueueStream *st_head  = &sq->streams[sq->head_stream];
+    for (unsigned int i = 0; i < sq->nb_streams; i++)
+    {
+        SyncQueueStream *st_head = &sq->streams[sq->head_stream];
         SyncQueueStream *st_other = &sq->streams[i];
         if (st_other->limiting && st_other->head_ts != AV_NOPTS_VALUE &&
             av_compare_ts(st_other->head_ts, st_other->tb,
-                          st_head->head_ts,  st_head->tb) < 0)
+                          st_head->head_ts, st_head->tb) < 0)
             sq->head_stream = i;
     }
 }
@@ -286,15 +294,18 @@ static int overflow_heartbeat(SyncQueue *sq, int stream_idx)
     int64_t tail_ts = AV_NOPTS_VALUE;
 
     /* if no stream specified, pick the one that is most ahead */
-    if (stream_idx < 0) {
+    if (stream_idx < 0)
+    {
         int64_t ts = AV_NOPTS_VALUE;
 
-        for (int i = 0; i < sq->nb_streams; i++) {
+        for (int i = 0; i < sq->nb_streams; i++)
+        {
             st = &sq->streams[i];
             if (st->head_ts != AV_NOPTS_VALUE &&
                 (ts == AV_NOPTS_VALUE ||
                  av_compare_ts(ts, sq->streams[stream_idx].tb,
-                               st->head_ts, st->tb) < 0)) {
+                               st->head_ts, st->tb) < 0))
+            {
                 ts = st->head_ts;
                 stream_idx = i;
             }
@@ -308,7 +319,8 @@ static int overflow_heartbeat(SyncQueue *sq, int stream_idx)
 
     /* get the chosen stream's tail timestamp */
     for (size_t i = 0; tail_ts == AV_NOPTS_VALUE &&
-                       av_fifo_peek(st->fifo, &frame, 1, i) >= 0; i++)
+                       av_fifo_peek(st->fifo, &frame, 1, i) >= 0;
+         i++)
         tail_ts = frame_end(sq, frame, 0);
 
     /* overflow triggers when the tail is over specified duration behind the head */
@@ -318,7 +330,8 @@ static int overflow_heartbeat(SyncQueue *sq, int stream_idx)
 
     /* signal a fake timestamp for all streams that prevent tail_ts from being output */
     tail_ts++;
-    for (unsigned int i = 0; i < sq->nb_streams; i++) {
+    for (unsigned int i = 0; i < sq->nb_streams; i++)
+    {
         const SyncQueueStream *st1 = &sq->streams[i];
         int64_t ts;
 
@@ -350,7 +363,8 @@ int sq_send(SyncQueue *sq, unsigned int stream_idx, SyncQueueFrame frame)
     av_assert0(stream_idx < sq->nb_streams);
     st = &sq->streams[stream_idx];
 
-    if (frame_null(sq, frame)) {
+    if (frame_null(sq, frame))
+    {
         av_log(sq->logctx, AV_LOG_DEBUG, "sq: %u EOF\n", stream_idx);
         finish_stream(sq, stream_idx);
         return 0;
@@ -360,7 +374,7 @@ int sq_send(SyncQueue *sq, unsigned int stream_idx, SyncQueueFrame frame)
 
     tb_update(sq, st, frame);
 
-    ret = objpool_get(sq->pool, (void**)&dst);
+    ret = objpool_get(sq->pool, (void **)&dst);
     if (ret < 0)
         return ret;
 
@@ -368,9 +382,10 @@ int sq_send(SyncQueue *sq, unsigned int stream_idx, SyncQueueFrame frame)
 
     nb_samples = frame_samples(sq, dst);
     // make sure frame duration is consistent with sample count
-    if (nb_samples) {
+    if (nb_samples)
+    {
         av_assert0(dst.f->sample_rate > 0);
-        dst.f->duration = av_rescale_q(nb_samples, (AVRational){ 1, dst.f->sample_rate },
+        dst.f->duration = av_rescale_q(nb_samples, (AVRational){1, dst.f->sample_rate},
                                        dst.f->time_base);
     }
 
@@ -380,24 +395,26 @@ int sq_send(SyncQueue *sq, unsigned int stream_idx, SyncQueueFrame frame)
            av_ts2timestr(ts, &st->tb));
 
     ret = av_fifo_write(st->fifo, &dst, 1);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         frame_move(sq, frame, dst);
-        objpool_release(sq->pool, (void**)&dst);
+        objpool_release(sq->pool, (void **)&dst);
         return ret;
     }
 
     stream_update_ts(sq, stream_idx, ts);
 
     st->samples_queued += nb_samples;
-    st->samples_sent   += nb_samples;
+    st->samples_sent += nb_samples;
 
     if (st->frame_samples)
         st->frames_sent = st->samples_sent / st->frame_samples;
     else
         st->frames_sent++;
 
-    if (st->frames_sent >= st->frames_max) {
-        av_log(sq->logctx, AV_LOG_DEBUG, "sq: %u frames_max %"PRIu64" reached\n",
+    if (st->frames_sent >= st->frames_max)
+    {
+        av_log(sq->logctx, AV_LOG_DEBUG, "sq: %u frames_max %ulld reached\n",
                stream_idx, st->frames_max);
 
         finish_stream(sq, stream_idx);
@@ -410,23 +427,24 @@ static void offset_audio(AVFrame *f, int nb_samples)
 {
     const int planar = av_sample_fmt_is_planar(f->format);
     const int planes = planar ? f->ch_layout.nb_channels : 1;
-    const int    bps = av_get_bytes_per_sample(f->format);
+    const int bps = av_get_bytes_per_sample(f->format);
     const int offset = nb_samples * bps * (planar ? 1 : f->ch_layout.nb_channels);
 
     av_assert0(bps > 0);
     av_assert0(nb_samples < f->nb_samples);
 
-    for (int i = 0; i < planes; i++) {
+    for (int i = 0; i < planes; i++)
+    {
         f->extended_data[i] += offset;
         if (i < FF_ARRAY_ELEMS(f->data))
             f->data[i] = f->extended_data[i];
     }
     f->linesize[0] -= offset;
-    f->nb_samples  -= nb_samples;
-    f->duration     = av_rescale_q(f->nb_samples, (AVRational){ 1, f->sample_rate },
-                                   f->time_base);
-    f->pts         += av_rescale_q(nb_samples,    (AVRational){ 1, f->sample_rate },
-                                   f->time_base);
+    f->nb_samples -= nb_samples;
+    f->duration = av_rescale_q(f->nb_samples, (AVRational){1, f->sample_rate},
+                               f->time_base);
+    f->pts += av_rescale_q(nb_samples, (AVRational){1, f->sample_rate},
+                           f->time_base);
 }
 
 static int frame_is_aligned(const SyncQueue *sq, const AVFrame *frame)
@@ -438,7 +456,7 @@ static int frame_is_aligned(const SyncQueue *sq, const AVFrame *frame)
     // only check data[0], because we always offset all data pointers
     // by the same offset, so if one is aligned, all are
     if (!((uintptr_t)frame->data[0] & sq->align_mask) &&
-        !(frame->linesize[0]        & sq->align_mask) &&
+        !(frame->linesize[0] & sq->align_mask) &&
         frame->linesize[0] > sq->align_mask)
         return 1;
 
@@ -458,7 +476,8 @@ static int receive_samples(SyncQueue *sq, SyncQueueStream *st,
 
     // peeked frame has enough samples and its data is aligned
     // -> we can just make a reference and limit its sample count
-    if (src.f->nb_samples > nb_samples && frame_is_aligned(sq, src.f)) {
+    if (src.f->nb_samples > nb_samples && frame_is_aligned(sq, src.f))
+    {
         ret = av_frame_ref(dst, src.f);
         if (ret < 0)
             return ret;
@@ -475,7 +494,7 @@ static int receive_samples(SyncQueue *sq, SyncQueueStream *st,
     if (ret < 0)
         return ret;
 
-    dst->format     = src.f->format;
+    dst->format = src.f->format;
     dst->nb_samples = nb_samples;
 
     ret = av_frame_get_buffer(dst, 0);
@@ -487,7 +506,8 @@ static int receive_samples(SyncQueue *sq, SyncQueueStream *st,
         goto fail;
 
     dst->nb_samples = 0;
-    while (dst->nb_samples < nb_samples) {
+    while (dst->nb_samples < nb_samples)
+    {
         int to_copy;
 
         ret = av_fifo_peek(st->fifo, &src, 1, 0);
@@ -500,9 +520,10 @@ static int receive_samples(SyncQueue *sq, SyncQueueStream *st,
 
         if (to_copy < src.f->nb_samples)
             offset_audio(src.f, to_copy);
-        else {
+        else
+        {
             av_frame_unref(src.f);
-            objpool_release(sq->pool, (void**)&src);
+            objpool_release(sq->pool, (void **)&src);
             av_fifo_drain2(st->fifo, 1);
         }
         st->samples_queued -= to_copy;
@@ -511,8 +532,8 @@ static int receive_samples(SyncQueue *sq, SyncQueueStream *st,
     }
 
 finish:
-    dst->duration   = av_rescale_q(nb_samples, (AVRational){ 1, dst->sample_rate },
-                                   dst->time_base);
+    dst->duration = av_rescale_q(nb_samples, (AVRational){1, dst->sample_rate},
+                                 dst->time_base);
 
     return 0;
 
@@ -524,15 +545,15 @@ fail:
 static int receive_for_stream(SyncQueue *sq, unsigned int stream_idx,
                               SyncQueueFrame frame)
 {
-    const SyncQueueStream *st_head = sq->head_stream >= 0 ?
-                                     &sq->streams[sq->head_stream] : NULL;
+    const SyncQueueStream *st_head = sq->head_stream >= 0 ? &sq->streams[sq->head_stream] : NULL;
     SyncQueueStream *st;
 
     av_assert0(stream_idx < sq->nb_streams);
     st = &sq->streams[stream_idx];
 
     if (av_fifo_can_read(st->fifo) &&
-        (st->frame_samples <= st->samples_queued || st->finished)) {
+        (st->frame_samples <= st->samples_queued || st->finished))
+    {
         int nb_samples = st->frame_samples;
         SyncQueueFrame peek;
         int64_t ts;
@@ -553,15 +574,19 @@ static int receive_for_stream(SyncQueue *sq, unsigned int stream_idx,
          * Frames with no timestamps are just passed through with no conditions.
          * Frames are also passed through when there are no limiting streams.
          */
-        if (cmp <= 0 || ts == AV_NOPTS_VALUE || !sq->have_limiting) {
+        if (cmp <= 0 || ts == AV_NOPTS_VALUE || !sq->have_limiting)
+        {
             if (nb_samples &&
-                (nb_samples != peek.f->nb_samples || !frame_is_aligned(sq, peek.f))) {
+                (nb_samples != peek.f->nb_samples || !frame_is_aligned(sq, peek.f)))
+            {
                 int ret = receive_samples(sq, st, frame.f, nb_samples);
                 if (ret < 0)
                     return ret;
-            } else {
+            }
+            else
+            {
                 frame_move(sq, frame, peek);
-                objpool_release(sq->pool, (void**)&peek);
+                objpool_release(sq->pool, (void **)&peek);
                 av_fifo_drain2(st->fifo, 1);
                 av_assert0(st->samples_queued >= frame_samples(sq, frame));
                 st->samples_queued -= frame_samples(sq, frame);
@@ -577,8 +602,7 @@ static int receive_for_stream(SyncQueue *sq, unsigned int stream_idx,
         }
     }
 
-    return (sq->finished || (st->finished && !av_fifo_can_read(st->fifo))) ?
-            AVERROR_EOF : AVERROR(EAGAIN);
+    return (sq->finished || (st->finished && !av_fifo_can_read(st->fifo))) ? AVERROR_EOF : AVERROR(EAGAIN);
 }
 
 static int receive_internal(SyncQueue *sq, int stream_idx, SyncQueueFrame frame)
@@ -587,15 +611,18 @@ static int receive_internal(SyncQueue *sq, int stream_idx, SyncQueueFrame frame)
     int ret;
 
     /* read a frame for a specific stream */
-    if (stream_idx >= 0) {
+    if (stream_idx >= 0)
+    {
         ret = receive_for_stream(sq, stream_idx, frame);
         return (ret < 0) ? ret : stream_idx;
     }
 
     /* read a frame for any stream with available output */
-    for (unsigned int i = 0; i < sq->nb_streams; i++) {
+    for (unsigned int i = 0; i < sq->nb_streams; i++)
+    {
         ret = receive_for_stream(sq, i, frame);
-        if (ret == AVERROR_EOF || ret == AVERROR(EAGAIN)) {
+        if (ret == AVERROR_EOF || ret == AVERROR(EAGAIN))
+        {
             nb_eof += (ret == AVERROR_EOF);
             continue;
         }
@@ -636,10 +663,10 @@ int sq_add_stream(SyncQueue *sq, int limiting)
     /* we set a valid default, so that a pathological stream that never
      * receives even a real timebase (and no frames) won't stall all other
      * streams forever; cf. overflow_heartbeat() */
-    st->tb      = (AVRational){ 1, 1 };
+    st->tb = (AVRational){1, 1};
     st->head_ts = AV_NOPTS_VALUE;
     st->frames_max = UINT64_MAX;
-    st->limiting   = limiting;
+    st->limiting = limiting;
 
     sq->have_limiting |= limiting;
 
@@ -679,16 +706,16 @@ SyncQueue *sq_alloc(enum SyncQueueType type, int64_t buf_size_us, void *logctx)
     if (!sq)
         return NULL;
 
-    sq->type                 = type;
-    sq->buf_size_us          = buf_size_us;
-    sq->logctx               = logctx;
+    sq->type = type;
+    sq->buf_size_us = buf_size_us;
+    sq->logctx = logctx;
 
-    sq->head_stream          = -1;
+    sq->head_stream = -1;
     sq->head_finished_stream = -1;
 
-    sq->pool = (type == SYNC_QUEUE_PACKETS) ? objpool_alloc_packets() :
-                                              objpool_alloc_frames();
-    if (!sq->pool) {
+    sq->pool = (type == SYNC_QUEUE_PACKETS) ? objpool_alloc_packets() : objpool_alloc_frames();
+    if (!sq->pool)
+    {
         av_freep(&sq);
         return NULL;
     }
@@ -703,10 +730,11 @@ void sq_free(SyncQueue **psq)
     if (!sq)
         return;
 
-    for (unsigned int i = 0; i < sq->nb_streams; i++) {
+    for (unsigned int i = 0; i < sq->nb_streams; i++)
+    {
         SyncQueueFrame frame;
         while (av_fifo_read(sq->streams[i].fifo, &frame, 1) >= 0)
-            objpool_release(sq->pool, (void**)&frame);
+            objpool_release(sq->pool, (void **)&frame);
 
         av_fifo_freep2(&sq->streams[i].fifo);
     }

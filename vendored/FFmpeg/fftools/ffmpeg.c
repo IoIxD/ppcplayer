@@ -567,7 +567,10 @@ void update_benchmark(const char *fmt, ...)
             vsnprintf(buf, sizeof(buf), fmt, va);
             va_end(va);
             av_log(NULL, AV_LOG_INFO,
-                   "bench: %8" PRIu64 " user %8" PRIu64 " sys %8" PRIu64 " real %s \n",
+                   "bench: %8ulld"
+                   " user %8ulld"
+                   " sys %8ulld"
+                   " real %s \n",
                    t.user_usec - current_time.user_usec,
                    t.sys_usec - current_time.sys_usec,
                    t.real_usec - current_time.real_usec, buf);

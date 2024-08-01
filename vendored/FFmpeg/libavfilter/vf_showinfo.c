@@ -493,7 +493,7 @@ static void dump_sei_film_grain_params_metadata(AVFilterContext *ctx, const AVFr
     }
 
     av_log(ctx, AV_LOG_INFO, "type %s; ", film_grain_type_names[fgp->type]);
-    av_log(ctx, AV_LOG_INFO, "seed=%" PRIu64 "; ", fgp->seed);
+    av_log(ctx, AV_LOG_INFO, "seed=%ulld; ", fgp->seed);
     av_log(ctx, AV_LOG_INFO, "width=%d; ", fgp->width);
     av_log(ctx, AV_LOG_INFO, "height=%d; ", fgp->height);
     av_log(ctx, AV_LOG_INFO, "subsampling_x=%d; ", fgp->subsampling_x);
@@ -665,12 +665,12 @@ static void dump_dovi_metadata(AVFilterContext *ctx, const AVFrameSideData *sd)
         }
 
         av_log(ctx, AV_LOG_INFO, "}; nlq_offset=%" PRIu16 "; ", nlq->nlq_offset);
-        av_log(ctx, AV_LOG_INFO, "vdr_in_max=%" PRIu64 "; ", nlq->vdr_in_max);
+        av_log(ctx, AV_LOG_INFO, "vdr_in_max=%ulld; ", nlq->vdr_in_max);
         switch (mapping->nlq_method_idc)
         {
         case AV_DOVI_NLQ_LINEAR_DZ:
-            av_log(ctx, AV_LOG_INFO, "linear_deadzone_slope=%" PRIu64 "; ", nlq->linear_deadzone_slope);
-            av_log(ctx, AV_LOG_INFO, "linear_deadzone_threshold=%" PRIu64 "\n", nlq->linear_deadzone_threshold);
+            av_log(ctx, AV_LOG_INFO, "linear_deadzone_slope=%ulld; ", nlq->linear_deadzone_slope);
+            av_log(ctx, AV_LOG_INFO, "linear_deadzone_threshold=%ulld\n", nlq->linear_deadzone_threshold);
             break;
         }
     }
@@ -827,22 +827,6 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
             data += frame->linesize[plane];
         }
     }
-
-    av_log(ctx, AV_LOG_INFO,
-           "n:%4" PRId64 " pts:%7s pts_time:%-7s duration:%7" PRId64
-           " duration_time:%-7s "
-           "fmt:%s cl:%s sar:%d/%d s:%dx%d i:%c iskey:%d type:%c ",
-           inlink->frame_count_out,
-           av_ts2str(frame->pts), av_ts2timestr(frame->pts, &inlink->time_base),
-           frame->duration, av_ts2timestr(frame->duration, &inlink->time_base),
-           desc->name, av_chroma_location_name(frame->chroma_location),
-           frame->sample_aspect_ratio.num, frame->sample_aspect_ratio.den,
-           frame->width, frame->height,
-           !(frame->flags & AV_FRAME_FLAG_INTERLACED) ? 'P' : /* Progressive  */
-               (frame->flags & AV_FRAME_FLAG_TOP_FIELD_FIRST) ? 'T'
-                                                              : 'B', /* Top / Bottom */
-           !!(frame->flags & AV_FRAME_FLAG_KEY),
-           av_get_picture_type_char(frame->pict_type));
 
     if (s->calculate_checksums)
     {

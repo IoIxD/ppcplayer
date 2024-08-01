@@ -317,7 +317,7 @@ static int rpl_read_header(AVFormatContext *s)
     {
         int64_t offset, video_size, audio_size;
         error |= read_line(pb, line, sizeof(line));
-        if (3 != sscanf(line, "%lld , %lld ; %" SCNd64,
+        if (3 != sscanf(line, "%lld , %lld ; %lld",
                         &offset, &video_size, &audio_size))
         {
             error = -1;

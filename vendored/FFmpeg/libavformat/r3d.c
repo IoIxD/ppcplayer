@@ -48,7 +48,7 @@ static int read_atom(AVFormatContext *s, Atom *atom)
     if (atom->size < 8)
         return -1;
     atom->tag = avio_rl32(s->pb);
-    av_log(s, AV_LOG_TRACE, "atom %u %.4s offset %#" PRIx64 "\n",
+    av_log(s, AV_LOG_TRACE, "atom %u %.4s offset %#ulld\n",
            atom->size, (char *)&atom->tag, atom->offset);
     return atom->size;
 }
@@ -196,7 +196,7 @@ static int r3d_read_header(AVFormatContext *s)
         s->ctx_flags |= AVFMTCTX_NOHEADER;
 
     si->data_offset = avio_tell(s->pb);
-    av_log(s, AV_LOG_TRACE, "data offset %#" PRIx64 "\n", si->data_offset);
+    av_log(s, AV_LOG_TRACE, "data offset %#ulld\n", si->data_offset);
     if (!(s->pb->seekable & AVIO_SEEKABLE_NORMAL))
         return 0;
     // find REOB/REOF/REOS to load index

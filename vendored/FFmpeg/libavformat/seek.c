@@ -340,7 +340,7 @@ int ff_seek_frame_binary(AVFormatContext *s, int stream_index,
         {
             pos_min = e->pos;
             ts_min = e->timestamp;
-            av_log(s, AV_LOG_TRACE, "using cached pos_min=0x%" PRIx64 " dts_min=%s\n",
+            av_log(s, AV_LOG_TRACE, "using cached pos_min=0x%lld dts_min=%s\n",
                    pos_min, av_ts2str(ts_min));
         }
         else
@@ -358,7 +358,7 @@ int ff_seek_frame_binary(AVFormatContext *s, int stream_index,
             pos_max = e->pos;
             ts_max = e->timestamp;
             pos_limit = pos_max - e->min_distance;
-            av_log(s, AV_LOG_TRACE, "using cached pos_max=0x%" PRIx64 " pos_limit=0x%" PRIx64 " dts_max=%s\n", pos_max, pos_limit, av_ts2str(ts_max));
+            av_log(s, AV_LOG_TRACE, "using cached pos_max=0x%lld pos_limit=0x%lld dts_max=%s\n", pos_max, pos_limit, av_ts2str(ts_max));
         }
     }
 
@@ -465,7 +465,7 @@ int64_t ff_gen_search(AVFormatContext *s, int stream_index, int64_t target_ts,
     while (pos_min < pos_limit)
     {
         av_log(s, AV_LOG_TRACE,
-               "pos_min=0x%" PRIx64 " pos_max=0x%" PRIx64 " dts_min=%s dts_max=%s\n",
+               "pos_min=0x%lld pos_max=0x%lld dts_min=%s dts_max=%s\n",
                pos_min, pos_max, av_ts2str(ts_min), av_ts2str(ts_max));
         av_assert0(pos_limit <= pos_max);
 

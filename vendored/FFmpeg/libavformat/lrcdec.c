@@ -103,12 +103,12 @@ static int64_t read_ts(const char *p, int64_t *start)
     {
         return 0;
     }
-    if (sscanf(p, "[-%" SCNu64 ":%" SCNu64 ".%" SCNu64 "]", &mm, &ss, &cs) == 3)
+    if (sscanf(p, "[-%ulld:%ulld.%ulld]", &mm, &ss, &cs) == 3)
     {
         /* Just in case negative pts, players may drop it but we won't. */
         *start = -(int64_t)(mm * 60000 + ss * 1000 + cs * 10);
     }
-    else if (sscanf(p, "[%" SCNu64 ":%" SCNu64 ".%" SCNu64 "]", &mm, &ss, &cs) == 3)
+    else if (sscanf(p, "[%ulld:%ulld.%ulld]", &mm, &ss, &cs) == 3)
     {
         *start = mm * 60000 + ss * 1000 + cs * 10;
     }
@@ -168,7 +168,7 @@ static int lrc_probe(const AVProbeData *p)
     {
         return 40;
     }
-    if (sscanf(p->buf + offset, "%lld:%" SCNu64 ".%" SCNu64 "]",
+    if (sscanf(p->buf + offset, "%lld:%ulld.%ulld]",
                &mm, &ss, &cs) == 3)
     {
         return 50;
@@ -224,7 +224,7 @@ static int lrc_read_header(AVFormatContext *s)
 
                 *right_bracket_offset = *comma_offset = '\0';
                 if (strcmp(line.str + 1, "offset") ||
-                    sscanf(comma_offset + 1, "%" SCNd64, &lrc->ts_offset) != 1)
+                    sscanf(comma_offset + 1, "%lld", &lrc->ts_offset) != 1)
                 {
                     av_dict_set(&s->metadata, line.str + 1, comma_offset + 1, 0);
                 }

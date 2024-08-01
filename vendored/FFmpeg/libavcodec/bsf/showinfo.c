@@ -44,7 +44,8 @@ static int showinfo_filter(AVBSFContext *ctx, AVPacket *pkt)
 
     crc = av_adler32_update(0, pkt->data, pkt->size);
     av_log(ctx, AV_LOG_INFO,
-           "n:%7" PRIu64 " "
+           "n:%7ulld"
+           " "
            "size:%7d "
            "pts:%s pt:%s "
            "dts:%s dt:%s "

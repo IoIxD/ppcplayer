@@ -661,7 +661,7 @@ static int d3d12va_encode_get_buffer_size(AVCodecContext *avctx,
 
     if (meta->EncodeErrorFlags != D3D12_VIDEO_ENCODER_ENCODE_ERROR_FLAG_NO_ERROR)
     {
-        av_log(avctx, AV_LOG_ERROR, "Encode failed %" PRIu64 "\n", meta->EncodeErrorFlags);
+        av_log(avctx, AV_LOG_ERROR, "Encode failed %ulld\n", meta->EncodeErrorFlags);
         err = AVERROR(EINVAL);
         return err;
     }

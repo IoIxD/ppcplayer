@@ -932,7 +932,7 @@ static int ebml_read_num(MatroskaDemuxContext *matroska, AVIOContext *pb,
         if (!total)
         {
             av_log(matroska->ctx, AV_LOG_ERROR,
-                   "0x00 at pos %lld (0x%" PRIx64 ") invalid as first byte "
+                   "0x00 at pos %lld (0x%lld) invalid as first byte "
                    "of an EBML number\n",
                    pos, pos);
         }
@@ -940,7 +940,7 @@ static int ebml_read_num(MatroskaDemuxContext *matroska, AVIOContext *pb,
         {
             av_log(matroska->ctx, AV_LOG_ERROR,
                    "Length %d indicated by an EBML number's first byte 0x%02x "
-                   "at pos %lld (0x%" PRIx64 ") exceeds max length %d.\n",
+                   "at pos %lld (0x%lld) exceeds max length %d.\n",
                    read, (uint8_t)total, pos, pos, max_size);
         }
         return AVERROR_INVALIDDATA;
@@ -966,14 +966,14 @@ err:
     if (pb->error)
     {
         av_log(matroska->ctx, AV_LOG_ERROR,
-               "Read error at pos. %" PRIu64 " (0x%" PRIx64 ")\n",
+               "Read error at pos. %ulld (0x%lld)\n",
                pos, pos);
         return pb->error;
     }
     if (eof_forbidden)
     {
         av_log(matroska->ctx, AV_LOG_ERROR, "File ended prematurely "
-                                            "at pos. %" PRIu64 " (0x%" PRIx64 ")\n",
+                                            "at pos. %ulld (0x%lld)\n",
                pos, pos);
         return AVERROR(EIO);
     }
@@ -1336,7 +1336,7 @@ static int ebml_parse(MatroskaDemuxContext *matroska,
                     else
                     {
                         av_log(matroska->ctx, AV_LOG_ERROR, "File ended prematurely "
-                                                            "at pos. %" PRIu64 " (0x%" PRIx64 ")\n",
+                                                            "at pos. %ulld (0x%lld)\n",
                                pos, pos);
                     }
                 }
@@ -1429,8 +1429,8 @@ static int ebml_parse(MatroskaDemuxContext *matroska,
                 else
                 {
                     av_log(matroska->ctx, AV_LOG_ERROR,
-                           "Element at 0x%" PRIx64 " ending at 0x%" PRIx64 " exceeds "
-                           "containing master element ending at 0x%" PRIx64 "\n",
+                           "Element at 0x%lld ending at 0x%lld exceeds "
+                           "containing master element ending at 0x%lld\n",
                            pos, elem_end, level_end);
                     return AVERROR_INVALIDDATA;
                 }
@@ -1442,7 +1442,7 @@ static int ebml_parse(MatroskaDemuxContext *matroska,
             else if (level->length != EBML_UNKNOWN_LENGTH)
             {
                 av_log(matroska->ctx, AV_LOG_ERROR, "Unknown-sized element "
-                                                    "at 0x%" PRIx64 " inside parent with finite size\n",
+                                                    "at 0x%lld inside parent with finite size\n",
                        pos);
                 return AVERROR_INVALIDDATA;
             }
@@ -1456,7 +1456,7 @@ static int ebml_parse(MatroskaDemuxContext *matroska,
                     // other unknown-length master elements.
                     av_log(matroska->ctx, AV_LOG_WARNING,
                            "Found unknown-length element 0x%" PRIX32 " other than "
-                           "a cluster at 0x%" PRIx64 ". Spec-incompliant, but "
+                           "a cluster at 0x%lld. Spec-incompliant, but "
                            "parsing will nevertheless be attempted.\n",
                            id, pos);
                     update_pos = -1;
@@ -1471,14 +1471,14 @@ static int ebml_parse(MatroskaDemuxContext *matroska,
             if (length != EBML_UNKNOWN_LENGTH)
             {
                 av_log(matroska->ctx, AV_LOG_ERROR,
-                       "Invalid length 0x%" PRIx64 " > 0x%" PRIx64 " for element "
-                       "with ID 0x%" PRIX32 " at 0x%" PRIx64 "\n",
+                       "Invalid length 0x%lld > 0x%lld for element "
+                       "with ID 0x%" PRIX32 " at 0x%lld\n",
                        length, max_lengths[syntax->type], id, pos);
             }
             else if (syntax->type != EBML_NONE)
             {
                 av_log(matroska->ctx, AV_LOG_ERROR,
-                       "Element with ID 0x%" PRIX32 " at pos. 0x%" PRIx64 " has "
+                       "Element with ID 0x%" PRIX32 " at pos. 0x%lld has "
                        "unknown length, yet the length of an element of its "
                        "type must be known.\n",
                        id, pos);
@@ -1487,7 +1487,7 @@ static int ebml_parse(MatroskaDemuxContext *matroska,
             {
                 av_log(matroska->ctx, AV_LOG_ERROR,
                        "Found unknown-length element with ID 0x%" PRIX32 " at "
-                       "pos. 0x%" PRIx64 " for which no syntax for parsing is "
+                       "pos. 0x%lld for which no syntax for parsing is "
                        "available.\n",
                        id, pos);
             }
@@ -1531,9 +1531,9 @@ static int ebml_parse(MatroskaDemuxContext *matroska,
                 if (dist > SKIP_THRESHOLD)
                 {
                     av_log(matroska->ctx, AV_LOG_ERROR,
-                           "Unknown element %" PRIX32 " at pos. 0x%" PRIx64 " with "
-                           "length 0x%" PRIx64 " considered as invalid data. Last "
-                           "known good position 0x%" PRIx64 ", %d unknown elements"
+                           "Unknown element %" PRIX32 " at pos. 0x%lld with "
+                           "length 0x%lld considered as invalid data. Last "
+                           "known good position 0x%lld, %d unknown elements"
                            " in a row\n",
                            id, pos, length, matroska->resync_pos,
                            matroska->unknown_count);
@@ -1778,7 +1778,7 @@ static MatroskaTrack *matroska_find_track_by_num(MatroskaDemuxContext *matroska,
         if (tracks[i].num == num)
             return &tracks[i];
 
-    av_log(matroska->ctx, AV_LOG_ERROR, "Invalid track number %" PRIu64 "\n", num);
+    av_log(matroska->ctx, AV_LOG_ERROR, "Invalid track number %ulld\n", num);
     return NULL;
 }
 
@@ -2664,7 +2664,7 @@ static int mkv_parse_video_projection(AVStream *st, const MatroskaTrack *track,
         break;
     default:
         av_log(logctx, AV_LOG_WARNING,
-               "Unknown spherical metadata type %" PRIu64 "\n",
+               "Unknown spherical metadata type %ulld\n",
                track->video.projection.type);
         return 0;
     }
@@ -2717,7 +2717,7 @@ static int mkv_parse_block_addition_mappings(AVFormatContext *s, AVStream *st, M
         {
         case MATROSKA_BLOCK_ADD_ID_TYPE_DEFAULT:
             av_log(s, AV_LOG_DEBUG,
-                   "Explicit block Addition Mapping type \"Use BlockAddIDValue\", value %" PRIu64 ","
+                   "Explicit block Addition Mapping type \"Use BlockAddIDValue\", value %ulld,"
                    " name \"%s\" found.\n",
                    mapping->value, mapping->name ? mapping->name : "");
             type = MATROSKA_BLOCK_ADD_ID_TYPE_OPAQUE;
@@ -2728,8 +2728,8 @@ static int mkv_parse_block_addition_mappings(AVFormatContext *s, AVStream *st, M
             {
                 int strict = s->strict_std_compliance >= FF_COMPLIANCE_STRICT;
                 av_log(s, strict ? AV_LOG_ERROR : AV_LOG_WARNING,
-                       "Invalid Block Addition Value 0x%" PRIx64 " for Block Addition Mapping Type "
-                       "0x%" PRIx64 ", name \"%s\"\n",
+                       "Invalid Block Addition Value 0x%lld for Block Addition Mapping Type "
+                       "0x%lld, name \"%s\"\n",
                        mapping->value, mapping->type,
                        mapping->name ? mapping->name : "");
                 if (strict)
@@ -2744,14 +2744,14 @@ static int mkv_parse_block_addition_mappings(AVFormatContext *s, AVStream *st, M
             break;
         default:
             av_log(s, AV_LOG_DEBUG,
-                   "Unknown Block Addition Mapping type 0x%" PRIx64 ", value %" PRIu64 ", name \"%s\"\n",
+                   "Unknown Block Addition Mapping type 0x%lld, value %ulld, name \"%s\"\n",
                    mapping->type, mapping->value, mapping->name ? mapping->name : "");
             if (mapping->value < 2)
             {
                 int strict = s->strict_std_compliance >= FF_COMPLIANCE_STRICT;
                 av_log(s, strict ? AV_LOG_ERROR : AV_LOG_WARNING,
-                       "Invalid Block Addition value 0x%" PRIu64 " for unknown Block Addition Mapping "
-                       "type %" PRIx64 ", name \"%s\"\n",
+                       "Invalid Block Addition value 0x%ulld for unknown Block Addition Mapping "
+                       "type %lld, name \"%s\"\n",
                        mapping->value, mapping->type,
                        mapping->name ? mapping->name : "");
                 if (strict)
@@ -2938,8 +2938,8 @@ static int mka_parse_audio_codec(MatroskaTrack *track, AVCodecParameters *par,
             track->audio.bitdepth > UINT16_MAX)
         {
             av_log(matroska->ctx, AV_LOG_WARNING,
-                   "Too large audio channel number %" PRIu64
-                   " or bitdepth %" PRIu64 ". Skipping track.\n",
+                   "Too large audio channel number %ulld"
+                   " or bitdepth %ulld. Skipping track.\n",
                    track->audio.channels, track->audio.bitdepth);
             if (matroska->ctx->error_recognition & AV_EF_EXPLODE)
                 return AVERROR_INVALIDDATA;
@@ -3384,7 +3384,7 @@ static int matroska_parse_tracks(AVFormatContext *s)
             track->type != MATROSKA_TRACK_TYPE_METADATA)
         {
             av_log(matroska->ctx, AV_LOG_INFO,
-                   "Unknown or unsupported track type %" PRIu64 "\n",
+                   "Unknown or unsupported track type %ulld\n",
                    track->type);
             continue;
         }
@@ -3593,7 +3593,7 @@ static int matroska_read_header(AVFormatContext *s)
         ebml.doctype_version > 3)
     {
         avpriv_report_missing_feature(matroska->ctx,
-                                      "EBML version %" PRIu64 ", doctype %s, doc version %" PRIu64,
+                                      "EBML version %ulld, doctype %s, doc version %ulld",
                                       ebml.version, ebml.doctype, ebml.doctype_version);
         ebml_free(ebml_syntax, &ebml);
         return AVERROR_PATCHWELCOME;
@@ -3602,7 +3602,7 @@ static int matroska_read_header(AVFormatContext *s)
     {
         av_log(matroska->ctx, AV_LOG_WARNING,
                "EBML header using unsupported features\n"
-               "(EBML version %" PRIu64 ", doctype %s, doc version %" PRIu64 ")\n",
+               "(EBML version %ulld, doctype %s, doc version %ulld)\n",
                ebml.version, ebml.doctype, ebml.doctype_version);
     }
     for (i = 0; i < FF_ARRAY_ELEMS(matroska_doctypes); i++)
@@ -4218,8 +4218,8 @@ static int matroska_parse_block_additional(MatroskaDemuxContext *matroska,
     {
         int strict = matroska->ctx->strict_std_compliance >= FF_COMPLIANCE_STRICT;
         av_log(matroska->ctx, strict ? AV_LOG_ERROR : AV_LOG_WARNING,
-               "BlockAddID %" PRIu64 " is higher than the reported MaxBlockAdditionID %" PRIu64 " "
-               "for Track with TrackNumber %" PRIu64 "\n",
+               "BlockAddID %ulld is higher than the reported MaxBlockAdditionID %ulld "
+               "for Track with TrackNumber %ulld\n",
                id, track->max_block_additional_id,
                track->num);
         if (strict)
@@ -4236,7 +4236,7 @@ static int matroska_parse_block_additional(MatroskaDemuxContext *matroska,
 
     if (id != 1 && !matroska->is_webm && !mapping)
     {
-        av_log(matroska->ctx, AV_LOG_WARNING, "BlockAddID %" PRIu64 " has no mapping. Skipping\n", id);
+        av_log(matroska->ctx, AV_LOG_WARNING, "BlockAddID %ulld has no mapping. Skipping\n", id);
         return 0;
     }
 
@@ -4350,7 +4350,7 @@ static int matroska_parse_frame(MatroskaDemuxContext *matroska,
     {
         int strict = matroska->ctx->strict_std_compliance >= FF_COMPLIANCE_STRICT;
         av_log(matroska->ctx, strict ? AV_LOG_ERROR : AV_LOG_WARNING,
-               "Unexpected BlockAdditions found in a Block from Track with TrackNumber %" PRIu64 " "
+               "Unexpected BlockAdditions found in a Block from Track with TrackNumber %ulld "
                "where MaxBlockAdditionID is 0\n",
                track->num);
         if (strict)
@@ -4472,7 +4472,7 @@ static int matroska_parse_block(MatroskaDemuxContext *matroska, AVBufferRef *buf
     if (!(st = track->stream))
     {
         av_log(matroska->ctx, AV_LOG_VERBOSE,
-               "No stream associated to TrackNumber %" PRIu64 ". "
+               "No stream associated to TrackNumber %ulld. "
                "Ignoring Block with this TrackNumber.\n",
                num);
         return 0;

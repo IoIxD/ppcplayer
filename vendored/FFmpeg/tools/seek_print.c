@@ -20,7 +20,7 @@
 
 #include "config.h"
 #if HAVE_UNISTD_H
-#include <unistd.h>             /* getopt */
+#include <unistd.h> /* getopt */
 #endif
 
 #include "libavformat/avformat.h"
@@ -36,8 +36,7 @@ static void usage(int ret)
             "Usage: seek_print file [command ...]\n"
             "Commands:\n"
             "    read\n"
-            "    seek:stream:min_ts:ts:max_ts:flags\n"
-            );
+            "    seek:stream:min_ts:ts:max_ts:flags\n");
     exit(ret);
 }
 
@@ -49,8 +48,10 @@ int main(int argc, char **argv)
     int64_t min_ts, max_ts, ts;
     AVPacket packet;
 
-    while ((opt = getopt(argc, argv, "h")) != -1) {
-        switch (opt) {
+    while ((opt = getopt(argc, argv, "h")) != -1)
+    {
+        switch (opt)
+        {
         case 'h':
             usage(0);
         default:
@@ -65,22 +66,29 @@ int main(int argc, char **argv)
     argv++;
     argc--;
 
-    if ((ret = avformat_open_input(&avf, filename, NULL, NULL)) < 0) {
+    if ((ret = avformat_open_input(&avf, filename, NULL, NULL)) < 0)
+    {
         fprintf(stderr, "%s: %s\n", filename, av_err2str(ret));
         return 1;
     }
-    if ((ret = avformat_find_stream_info(avf, NULL)) < 0) {
+    if ((ret = avformat_find_stream_info(avf, NULL)) < 0)
+    {
         fprintf(stderr, "%s: could not find codec parameters: %s\n", filename,
                 av_err2str(ret));
         return 1;
     }
 
-    for (; argc; argc--, argv++) {
-        if (!strcmp(*argv, "read")) {
+    for (; argc; argc--, argv++)
+    {
+        if (!strcmp(*argv, "read"))
+        {
             ret = av_read_frame(avf, &packet);
-            if (ret < 0) {
+            if (ret < 0)
+            {
                 printf("read: %d (%s)\n", ret, av_err2str(ret));
-            } else {
+            }
+            else
+            {
                 AVRational *tb = &avf->streams[packet.stream_index]->time_base;
                 printf("read: %d size=%d stream=%d dts=%s (%s) pts=%s (%s)\n",
                        ret, packet.size, packet.stream_index,
@@ -88,11 +96,18 @@ int main(int argc, char **argv)
                        av_ts2str(packet.pts), av_ts2timestr(packet.pts, tb));
                 av_packet_unref(&packet);
             }
-        } else if (sscanf(*argv, "seek:%i:%"SCNi64":%"SCNi64":%"SCNi64":%i",
-                   &stream, &min_ts, &ts, &max_ts, &flags) == 5) {
+        }
+        else if (sscanf(*argv, "seek:%i:%ulld"
+                               ":%ulld"
+                               ":%ulld"
+                               ":%i",
+                        &stream, &min_ts, &ts, &max_ts, &flags) == 5)
+        {
             ret = avformat_seek_file(avf, stream, min_ts, ts, max_ts, flags);
             printf("seek: %d (%s)\n", ret, av_err2str(ret));
-        } else {
+        }
+        else
+        {
             fprintf(stderr, "'%s': unknown command\n", *argv);
             return 1;
         }

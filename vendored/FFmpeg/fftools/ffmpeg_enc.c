@@ -538,10 +538,10 @@ void enc_stats_write(OutputStream *ost, EncStats *es,
             avio_printf(io, "%g", ptsi == INT64_MAX ? INFINITY : ptsi * av_q2d(tbi));
             continue;
         case ENC_STATS_FRAME_NUM:
-            avio_printf(io, "%" PRIu64, frame_num);
+            avio_printf(io, "%ulld", frame_num);
             continue;
         case ENC_STATS_FRAME_NUM_IN:
-            avio_printf(io, "%" PRIu64, fd ? fd->dec.frame_num : -1);
+            avio_printf(io, "%ulld", fd ? fd->dec.frame_num : -1);
             continue;
         }
 
@@ -550,7 +550,7 @@ void enc_stats_write(OutputStream *ost, EncStats *es,
             switch (c->type)
             {
             case ENC_STATS_SAMPLE_NUM:
-                avio_printf(io, "%" PRIu64, ost->samples_encoded);
+                avio_printf(io, "%ulld", ost->samples_encoded);
                 continue;
             case ENC_STATS_NB_SAMPLES:
                 avio_printf(io, "%d", frame->nb_samples);
@@ -645,12 +645,12 @@ static int update_video_stats(OutputStream *ost, const AVPacket *pkt, int write_
     frame_number = e->packets_encoded;
     if (vstats_version <= 1)
     {
-        fprintf(vstats_file, "frame= %5" PRId64 " q= %2.1f ", frame_number,
+        fprintf(vstats_file, "frame= 5ulld q= %2.1f ", frame_number,
                 quality / (float)FF_QP2LAMBDA);
     }
     else
     {
-        fprintf(vstats_file, "out= %2d st= %2d frame= %5" PRId64 " q= %2.1f ",
+        fprintf(vstats_file, "out= %2d st= %2d frame= 5ulld q= %2.1f ",
                 ost->file->index, ost->index, frame_number,
                 quality / (float)FF_QP2LAMBDA);
     }

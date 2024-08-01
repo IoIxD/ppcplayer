@@ -859,7 +859,7 @@ static int mxf_read_partition_pack(void *arg, AVIOContext *pb, int tag, int size
         partition->previous_partition == this_partition)
     {
         av_log(mxf->fc, AV_LOG_ERROR,
-               "PreviousPartition equal to ThisPartition %" PRIx64 "\n",
+               "PreviousPartition equal to ThisPartition %lld\n",
                partition->previous_partition);
         /* override with the actual previous partition offset */
         if (!mxf->parsing_backward && mxf->last_forward_partition > 1)
@@ -873,7 +873,7 @@ static int mxf_read_partition_pack(void *arg, AVIOContext *pb, int tag, int size
         if (partition->previous_partition == this_partition)
             partition->previous_partition = 0;
         av_log(mxf->fc, AV_LOG_ERROR,
-               "Overriding PreviousPartition with %" PRIx64 "\n",
+               "Overriding PreviousPartition with %lld\n",
                partition->previous_partition);
     }
 
@@ -883,7 +883,7 @@ static int mxf_read_partition_pack(void *arg, AVIOContext *pb, int tag, int size
         if (mxf->footer_partition && mxf->footer_partition != footer_partition)
         {
             av_log(mxf->fc, AV_LOG_ERROR,
-                   "inconsistent FooterPartition value: %" PRIu64 " != %" PRIu64 "\n",
+                   "inconsistent FooterPartition value: %ulld != %ulld\n",
                    mxf->footer_partition, footer_partition);
         }
         else
@@ -893,9 +893,9 @@ static int mxf_read_partition_pack(void *arg, AVIOContext *pb, int tag, int size
     }
 
     av_log(mxf->fc, AV_LOG_TRACE,
-           "PartitionPack: ThisPartition = 0x%" PRIX64
-           ", PreviousPartition = 0x%" PRIX64 ", "
-           "FooterPartition = 0x%" PRIX64 ", IndexSID = %i, BodySID = %i\n",
+           "PartitionPack: ThisPartition = 0x%lld"
+           ", PreviousPartition = 0x%lld, "
+           "FooterPartition = 0x%lld, IndexSID = %i, BodySID = %i\n",
            this_partition,
            partition->previous_partition, footer_partition,
            partition->index_sid, partition->body_sid);
@@ -1985,7 +1985,7 @@ static int mxf_absolute_bodysid_offset(MXFContext *mxf, int body_sid, int64_t of
     }
 
     av_log(mxf->fc, AV_LOG_ERROR,
-           "failed to find absolute offset of %" PRIX64 " in BodySID %i - partial file?\n",
+           "failed to find absolute offset of %lld in BodySID %i - partial file?\n",
            offset, body_sid);
 
     return AVERROR_INVALIDDATA;
@@ -3630,7 +3630,7 @@ static int mxf_read_local_tags(MXFContext *mxf, KLVPacket *klv, MXFMetadataReadF
             }
 
             av_log(mxf->fc, AV_LOG_ERROR,
-                   "local tag %#04x extends past end of local set @ %#" PRIx64 "\n",
+                   "local tag %#04x extends past end of local set @ %#ulld\n",
                    tag, klv->offset);
             return AVERROR_INVALIDDATA;
         }
@@ -3675,7 +3675,7 @@ static int mxf_parse_klv(MXFContext *mxf, KLVPacket klv, MXFMetadataReadFunc *re
         /* only seek forward, else this can loop for a long time */
         if (avio_tell(s->pb) > next)
         {
-            av_log(s, AV_LOG_ERROR, "read past end of KLV @ %#" PRIx64 "\n",
+            av_log(s, AV_LOG_ERROR, "read past end of KLV @ %#ulld\n",
                    klv.offset);
             return AVERROR_INVALIDDATA;
         }
@@ -3723,7 +3723,7 @@ static int mxf_seek_to_previous_partition(MXFContext *mxf)
 
     if (!mxf_is_partition_pack_key(klv.key))
     {
-        av_log(mxf->fc, AV_LOG_ERROR, "PreviousPartition @ %" PRIx64 " isn't a PartitionPack\n", klv.offset);
+        av_log(mxf->fc, AV_LOG_ERROR, "PreviousPartition @ %lld isn't a PartitionPack\n", klv.offset);
         return AVERROR_INVALIDDATA;
     }
 
@@ -3733,7 +3733,7 @@ static int mxf_seek_to_previous_partition(MXFContext *mxf)
      */
     if (klv.offset >= current_partition_ofs)
     {
-        av_log(mxf->fc, AV_LOG_ERROR, "PreviousPartition for PartitionPack @ %" PRIx64 " indirectly points to itself\n", current_partition_ofs);
+        av_log(mxf->fc, AV_LOG_ERROR, "PreviousPartition for PartitionPack @ %lld indirectly points to itself\n", current_partition_ofs);
         return AVERROR_INVALIDDATA;
     }
 
@@ -3779,7 +3779,7 @@ static int mxf_parse_handle_essence(MXFContext *mxf)
         if ((ret = avio_seek(pb, mxf->run_in + mxf->footer_partition, SEEK_SET)) < 0)
         {
             av_log(mxf->fc, AV_LOG_ERROR,
-                   "failed to seek to FooterPartition @ 0x%" PRIx64
+                   "failed to seek to FooterPartition @ 0x%lld"
                    " (%lld) - partial file?\n",
                    mxf->run_in + mxf->footer_partition, ret);
             return ret;
@@ -3852,7 +3852,7 @@ static void mxf_compute_essence_containers(AVFormatContext *s)
                 /* next ThisPartition < essence_offset */
                 p->essence_length = 0;
                 av_log(mxf->fc, AV_LOG_ERROR,
-                       "partition %i: bad ThisPartition = %" PRIX64 "\n",
+                       "partition %i: bad ThisPartition = %lld\n",
                        x + 1, mxf->partitions[x + 1].pack_ofs - mxf->run_in);
             }
         }
@@ -4074,7 +4074,7 @@ static int mxf_read_header(AVFormatContext *s)
         }
 
         PRINT_KEY(s, "read header", klv.key);
-        av_log(s, AV_LOG_TRACE, "size %" PRIu64 " offset %#" PRIx64 "\n", klv.length, klv.offset);
+        av_log(s, AV_LOG_TRACE, "size %ulld offset %#ulld\n", klv.length, klv.offset);
         if (mxf_match_uid(klv.key, mxf_encrypted_triplet_key, sizeof(mxf_encrypted_triplet_key)) ||
             IS_KLV_KEY(klv.key, mxf_essence_element_key) ||
             IS_KLV_KEY(klv.key, mxf_canopus_essence_element_key) ||
@@ -4347,7 +4347,7 @@ static int mxf_read_packet(AVFormatContext *s, AVPacket *pkt)
             max_data_size = klv.length;
             pos = klv.next_klv - klv.length;
             PRINT_KEY(s, "read packet", klv.key);
-            av_log(s, AV_LOG_TRACE, "size %" PRIu64 " offset %#" PRIx64 "\n", klv.length, klv.offset);
+            av_log(s, AV_LOG_TRACE, "size %ulld offset %#ulld\n", klv.length, klv.offset);
             if (mxf_match_uid(klv.key, mxf_encrypted_triplet_key, sizeof(mxf_encrypted_triplet_key)))
             {
                 ret = mxf_decrypt_triplet(s, pkt, &klv);

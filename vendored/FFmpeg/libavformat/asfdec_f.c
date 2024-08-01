@@ -256,7 +256,7 @@ static void get_tag(AVFormatContext *s, const char *key, int type, int len, int 
     case ASF_WORD:
     {
         uint64_t num = get_value(s->pb, type, type2_size);
-        snprintf(value, LEN, "%" PRIu64, num);
+        snprintf(value, LEN, "%ulld", num);
         break;
     }
     case ASF_GUID:
@@ -873,7 +873,7 @@ static int asf_read_header(AVFormatContext *s)
 
         if (avio_tell(pb) != gpos + gsize)
             av_log(s, AV_LOG_DEBUG,
-                   "gpos mismatch our pos=%" PRIu64 ", end=%lld\n",
+                   "gpos mismatch our pos=%ulld, end=%lld\n",
                    avio_tell(pb) - gpos, gsize);
         avio_seek(pb, gpos + gsize, SEEK_SET);
     }
@@ -1693,7 +1693,7 @@ static int asf_build_simple_index(AVFormatContext *s, int stream_index)
         pct = avio_rl32(s->pb);
         ict = avio_rl32(s->pb);
         av_log(s, AV_LOG_DEBUG,
-               "itime:0x%" PRIx64 ", pct:%d, ict:%d\n", itime, pct, ict);
+               "itime:0x%lld, pct:%d, ict:%d\n", itime, pct, ict);
 
         for (i = 0; i < ict; i++)
         {

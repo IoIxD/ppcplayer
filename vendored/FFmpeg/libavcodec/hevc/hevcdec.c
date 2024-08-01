@@ -3413,7 +3413,7 @@ static int verify_md5(HEVCContext *s, AVFrame *frame)
         }
         av_md5_final(s->md5_ctx, md5);
 
-#define MD5_PRI "%016" PRIx64 "%016" PRIx64
+#define MD5_PRI "%016ulld%016ulld"
 #define MD5_PRI_ARG(buf) AV_RB64(buf), AV_RB64((const uint8_t *)(buf) + 8)
 
         if (!memcmp(md5, s->sei.picture_hash.md5[i], 16))

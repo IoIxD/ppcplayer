@@ -35,7 +35,8 @@
 
 #define SIZE 157
 
-enum Op {
+enum Op
+{
     OP_READ,
     OP_READ_NZ,
     OP_READ_BIT,
@@ -51,15 +52,15 @@ enum Op {
 int main(int argc, char **argv)
 {
     BitstreamContext bc;
-    PutBitContext    pb;
-    AVLFG            lfg;
+    PutBitContext pb;
+    AVLFG lfg;
 
     uint8_t buf[SIZE + AV_INPUT_BUFFER_PADDING_SIZE];
     uint8_t dst[SIZE + AV_INPUT_BUFFER_PADDING_SIZE];
 
     uint32_t random_seed;
     uint64_t val, val1;
-    int32_t  sval, sval1;
+    int32_t sval, sval1;
     unsigned count;
     int ret;
 
@@ -69,28 +70,30 @@ int main(int argc, char **argv)
     else
         random_seed = av_get_random_seed();
 
-    fprintf(stderr, "Testing with LFG seed: %"PRIu32"\n", random_seed);
+    fprintf(stderr, "Testing with LFG seed: %" PRIu32 "\n", random_seed);
     av_lfg_init(&lfg, random_seed);
 
     for (unsigned i = 0; i < SIZE; i++)
         buf[i] = av_lfg_get(&lfg);
 
-    ret = bits_init8   (&bc, buf, SIZE);
+    ret = bits_init8(&bc, buf, SIZE);
     av_assert0(ret >= 0);
     init_put_bits(&pb, dst, SIZE);
 
     /* use a random sequence of bitreading operations to transfer data
      * from BitstreamContext to PutBitContext */
-    while (bits_left(&bc) > 0) {
+    while (bits_left(&bc) > 0)
+    {
         enum Op op = av_lfg_get(&lfg) % OP_NB;
 
-        switch (op) {
+        switch (op)
+        {
         case OP_READ:
             count = av_lfg_get(&lfg) % FFMIN(33, bits_left(&bc) + 1);
-            val1  = bits_peek(&bc, count);
-            val   = bits_read(&bc, count);
+            val1 = bits_peek(&bc, count);
+            val = bits_read(&bc, count);
 
-            fprintf(stderr, "%d read %u: %"PRIu64"\n", bits_tell(&bc) - count, count, val);
+            fprintf(stderr, "%d read %u: %ulld\n", bits_tell(&bc) - count, count, val);
 
             av_assert0(val == val1);
 
@@ -99,10 +102,10 @@ int main(int argc, char **argv)
         case OP_READ_NZ:
             count = av_lfg_get(&lfg) % FFMIN(33, bits_left(&bc) + 1);
             count = FFMAX(count, 1);
-            val1  = bits_peek_nz(&bc, count);
-            val   = bits_read_nz(&bc, count);
+            val1 = bits_peek_nz(&bc, count);
+            val = bits_read_nz(&bc, count);
 
-            fprintf(stderr, "%d read_nz %u: %"PRIu64"\n", bits_tell(&bc) - count, count, val);
+            fprintf(stderr, "%d read_nz %u: %ulld\n", bits_tell(&bc) - count, count, val);
 
             av_assert0(val == val1);
 
@@ -111,50 +114,54 @@ int main(int argc, char **argv)
         case OP_READ_BIT:
             val = bits_read_bit(&bc);
 
-            fprintf(stderr, "%d read_bit: %"PRIu64"\n", bits_tell(&bc) - 1, val);
+            fprintf(stderr, "%d read_bit: %ulld\n", bits_tell(&bc) - 1, val);
 
             put_bits(&pb, 1, val);
             break;
         case OP_READ_63:
             count = av_lfg_get(&lfg) % FFMIN(64, bits_left(&bc) + 1);
-            val   = bits_read_63(&bc, count);
+            val = bits_read_63(&bc, count);
 
-            fprintf(stderr, "%d read_63 %u: %"PRIu64"\n", bits_tell(&bc) - count, count, val);
+            fprintf(stderr, "%d read_63 %u: %ulld\n", bits_tell(&bc) - count, count, val);
 
             put_bits64(&pb, count, val);
             break;
         case OP_READ_64:
             count = av_lfg_get(&lfg) % FFMIN(65, bits_left(&bc) + 1);
-            val   = bits_read_64(&bc, count);
+            val = bits_read_64(&bc, count);
 
-            fprintf(stderr, "%d read_64 %u: %"PRIu64"\n", bits_tell(&bc) - count, count, val);
+            fprintf(stderr, "%d read_64 %u: %ulld\n", bits_tell(&bc) - count, count, val);
 
             put_bits64(&pb, count, val);
             break;
         case OP_READ_SIGNED:
             count = av_lfg_get(&lfg) % FFMIN(33, bits_left(&bc) + 1);
             sval1 = bits_peek_signed(&bc, count);
-            sval  = bits_read_signed(&bc, count);
+            sval = bits_read_signed(&bc, count);
 
-            fprintf(stderr, "%d read_signed %u: %"PRId32"\n", bits_tell(&bc) - count, count, sval);
+            fprintf(stderr, "%d read_signed %u: %" PRId32 "\n", bits_tell(&bc) - count, count, sval);
 
             av_assert0(sval == sval1);
 
-            if (count == 32) put_bits32(&pb, sval);
-            else             put_sbits(&pb, count, sval);
+            if (count == 32)
+                put_bits32(&pb, sval);
+            else
+                put_sbits(&pb, count, sval);
             break;
         case OP_READ_SIGNED_NZ:
             count = av_lfg_get(&lfg) % FFMIN(33, bits_left(&bc) + 1);
             count = FFMAX(count, 1);
             sval1 = bits_peek_signed_nz(&bc, count);
-            sval  = bits_read_signed_nz(&bc, count);
+            sval = bits_read_signed_nz(&bc, count);
 
-            fprintf(stderr, "%d read_signed_nz %u: %"PRId32"\n", bits_tell(&bc) - count, count, sval);
+            fprintf(stderr, "%d read_signed_nz %u: %" PRId32 "\n", bits_tell(&bc) - count, count, sval);
 
             av_assert0(sval == sval1);
 
-            if (count == 32) put_bits32(&pb, sval);
-            else             put_sbits(&pb, count, sval);
+            if (count == 32)
+                put_bits32(&pb, sval);
+            else
+                put_sbits(&pb, count, sval);
             break;
         case OP_ALIGN:
             count = (bits_tell(&bc) + 7) / 8 * 8 - bits_tell(&bc);
@@ -174,10 +181,10 @@ int main(int argc, char **argv)
             if (!bits_peek(&bc, count))
                 continue;
 
-            val   = bits_read(&bc, count);
-            sval  = bits_apply_sign(&bc, val);
+            val = bits_read(&bc, count);
+            sval = bits_apply_sign(&bc, val);
 
-            fprintf(stderr, "%d apply_sign %u %"PRId32"\n",
+            fprintf(stderr, "%d apply_sign %u %" PRId32 "\n",
                     bits_tell(&bc) - count - 1, count, sval);
 
             put_bits64(&pb, count, FFABS(sval));
@@ -192,8 +199,9 @@ int main(int argc, char **argv)
     flush_put_bits(&pb);
 
     for (unsigned i = 0; i < SIZE; i++)
-        if (buf[i] != dst[i]) {
-            fprintf(stderr, "Mismatch at byte %u: %hhu %hhu; seed %"PRIu32"\n",
+        if (buf[i] != dst[i])
+        {
+            fprintf(stderr, "Mismatch at byte %u: %hhu %hhu; seed %" PRIu32 "\n",
                     i, buf[i], dst[i], random_seed);
             return 1;
         }

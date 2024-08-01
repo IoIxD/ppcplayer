@@ -1,0 +1,20 @@
+prefix=/home/gavin/Projects/os9ffmpegplayer/lib
+exec_prefix=${prefix}
+bindir=${exec_prefix}/bin
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+ARCH=X86_64
+SYS=LINUX
+CC=gcc
+CFLAGS=-O4 -ffast-math  -Wall -I. -DHAVE_MALLOC_H -std=gnu99 -DHAVE_PTHREAD -s -fomit-frame-pointer
+ALTIVECFLAGS=
+LDFLAGS= -lm -lpthread -s
+AR=ar
+RANLIB=ranlib
+STRIP=strip
+AS=
+ASFLAGS= -f elf -m amd64
+EXE=
+VIS=no
+HAVE_GETOPT_LONG=1
+DEVNULL=/dev/null
