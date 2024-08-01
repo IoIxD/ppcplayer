@@ -1,3 +1,5 @@
-work in progress attempt to get ffmpeg on os9. why? we don't ask those questions.
+# os9ffmpegplayer
 
-to build, just use `./build.sh`.
+Work in progress attempt to get ffmpeg on os9. Why? We don't ask those questions.
+
+To download, see the releases sidebar. To build from source, just use `./build.sh`.
