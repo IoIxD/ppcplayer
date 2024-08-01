@@ -1,0 +1,22 @@
+Description: Fix invalid memory read when applying NNAs to effect plugins
+ See https://lib.openmpt.org/libopenmpt/md_announce-2017-06-02.html
+Origin: upstream, https://source.openmpt.org/browse/openmpt?op=revision&rev=8240
+Bug: https://bugs.openmpt.org/view.php?id=951
+Bug-Debian: https://bugs.debian.org/864195
+
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/soundlib/Snd_fx.cpp
++++ b/soundlib/Snd_fx.cpp
+@@ -2053,9 +2053,9 @@ CHANNELINDEX CSoundFile::CheckNNA(CHANNE
+ 				// (and if it is playing a note, we know that would be the last note played on this chan).
+ 				ModCommand::NOTE note = pChn->nNote;
+ 				// Caution: When in compatible mode, ModChannel::nNote stores the "real" note, not the mapped note!
+-				if(m_playBehaviour[kITRealNoteMapping] && note < CountOf(pChn->pModInstrument->NoteMap))
++				if(m_playBehaviour[kITRealNoteMapping] && note < CountOf(p->pModInstrument->NoteMap))
+ 				{
+-					note = pChn->pModInstrument->NoteMap[note - 1];
++					note = p->pModInstrument->NoteMap[note - 1];
+ 				}
+ 				applyNNAtoPlug = pPlugin->IsNotePlaying(note, GetBestMidiChannel(nChn), nChn);
+ 			}

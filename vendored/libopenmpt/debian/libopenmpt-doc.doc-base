@@ -1,0 +1,9 @@
+Document: libopenmpt-doc
+Title: libopenmpt API Documentation
+Author: OpenMPT contributors
+Abstract: API documentation for libopenmpt
+Section: Programming/C++
+
+Format: HTML
+Index: /usr/share/doc/libopenmpt-doc/html/index.html
+Files: /usr/share/doc/libopenmpt-doc/html/*

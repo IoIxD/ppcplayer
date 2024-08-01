@@ -1,0 +1,20 @@
+Description: Fix CVE-2018-10017
+ See https://lib.openmpt.org/libopenmpt/2018/04/08/security-updates-0.3.8-0.2-beta31-0.2.7561-beta20.5-p8-0.2.7386-beta20.3-p11/
+ Fix possible out-of-bounds memory read with IT and MO3 files containing many
+ nested pattern loops.
+Origin: upstream, https://source.openmpt.org/browse/openmpt?op=revision&rev=10042
+Bug-Debian: https://bugs.debian.org/895406
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/soundlib/Snd_fx.cpp
++++ b/soundlib/Snd_fx.cpp
+@@ -1042,7 +1042,8 @@ std::vector<GetLengthType> CSoundFile::G
+ 			if(GetType() == MOD_TYPE_IT)
+ 			{
+ 				// IT pattern loop start row update - at the end of a pattern loop, set pattern loop start to next row (for upcoming pattern loops with missing SB0)
+-				for(CHANNELINDEX nChn = 0; nChn < GetNumChannels(); nChn++)
++				pChn = memory.state.Chn;
++				for(CHANNELINDEX nChn = 0; nChn < GetNumChannels(); nChn++, pChn++)
+ 				{
+ 					if((pChn->rowCommand.command == CMD_S3MCMDEX && pChn->rowCommand.param >= 0xB1 && pChn->rowCommand.param <= 0xBF))
+ 					{

@@ -1,0 +1,351 @@
+Description: Fix excessive CPU consumption on malformed DMF and MDL files
+ See https://lib.openmpt.org/libopenmpt/md_announce-2017-06-02.html
+ This patch prevents loading of DMF and MDL modules taking multiple minutes if
+ the module contains truncated compressed samples.
+Origin: upstream, https://source.openmpt.org/browse/openmpt?op=revision&rev=8237
+Bug-Debian: https://bugs.debian.org/864195
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/soundlib/Load_dmf.cpp
++++ b/soundlib/Load_dmf.cpp
+@@ -16,6 +16,7 @@
+ #include "stdafx.h"
+ #include "Loaders.h"
+ #include "ChunkReader.h"
++#include <stdexcept>
+ 
+ OPENMPT_NAMESPACE_BEGIN
+ 
+@@ -1087,68 +1088,66 @@ struct DMFHTree
+ 	int bitnum;
+ 	int lastnode, nodecount;
+ 	DMFHNode nodes[256];
+-};
+-
+ 
+-// DMF Huffman ReadBits
+-static uint8 DMFReadBits(DMFHTree *tree, uint32 nbits)
+-//----------------------------------------------------
+-{
+-	uint8 x = 0, bitv = 1;
+-	while(nbits--)
++	// DMF Huffman ReadBits
++	uint8 DMFReadBits(int nbits)
+ 	{
+-		if (tree->bitnum)
+-		{
+-			tree->bitnum--;
+-		} else
++		if(bitnum < nbits)
+ 		{
+-			tree->bitbuf = (tree->ibuf < tree->ibufmax) ? *(tree->ibuf++) : 0;
+-			tree->bitnum = 7;
++			if(ibuf < ibufmax)
++			{
++				bitbuf |= (((uint32)(*ibuf++)) << bitnum);
++				bitnum += 8;
++			} else
++			{
++				throw std::range_error("Truncated DMF sample block");
++			}
+ 		}
+-		if (tree->bitbuf & 1) x |= bitv;
+-		bitv <<= 1;
+-		tree->bitbuf >>= 1;
++
++		uint8 v = static_cast<uint8>(bitbuf & ((1 << nbits) - 1));
++		bitbuf >>= nbits;
++		bitnum -= nbits;
++		return v;
+ 	}
+-	return x;
+-}
+ 
+-//
+-// tree: [8-bit value][12-bit index][12-bit index] = 32-bit
+-//
+ 
+-static void DMFNewNode(DMFHTree *tree)
+-//------------------------------------
+-{
+-	uint8 isleft, isright;
+-	int actnode;
+-
+-	actnode = tree->nodecount;
+-	if (actnode > 255) return;
+-	tree->nodes[actnode].value = DMFReadBits(tree, 7);
+-	isleft = DMFReadBits(tree, 1);
+-	isright = DMFReadBits(tree, 1);
+-	actnode = tree->lastnode;
+-	if (actnode > 255) return;
+-	tree->nodecount++;
+-	tree->lastnode = tree->nodecount;
+-	if(isleft)
+-	{
+-		tree->nodes[actnode].left = (int16)tree->lastnode;
+-		DMFNewNode(tree);
+-	} else
+-	{
+-		tree->nodes[actnode].left = -1;
+-	}
+-	tree->lastnode = tree->nodecount;
+-	if(isright)
+-	{
+-		tree->nodes[actnode].right = (int16)tree->lastnode;
+-		DMFNewNode(tree);
+-	} else
+-	{
+-		tree->nodes[actnode].right = -1;
++	//
++	// tree: [8-bit value][12-bit index][12-bit index] = 32-bit
++	//
++
++	void DMFNewNode()
++	{
++		uint8 isleft, isright;
++		int actnode;
++
++		actnode = nodecount;
++		if(actnode > 255) return;
++		nodes[actnode].value = DMFReadBits(7);
++		isleft = DMFReadBits(1);
++		isright = DMFReadBits(1);
++		actnode = lastnode;
++		if(actnode > 255) return;
++		nodecount++;
++		lastnode = nodecount;
++		if(isleft)
++		{
++			nodes[actnode].left = (int16)lastnode;
++			DMFNewNode();
++		} else
++		{
++			nodes[actnode].left = -1;
++		}
++		lastnode = nodecount;
++		if(isright)
++		{
++			nodes[actnode].right = (int16)lastnode;
++			DMFNewNode();
++		} else
++		{
++			nodes[actnode].right = -1;
++		}
+ 	}
+-}
++};
+ 
+ 
+ uintptr_t DMFUnpack(uint8 *psample, const uint8 *ibuf, const uint8 *ibufmax, uint32 maxlen)
+@@ -1159,30 +1158,32 @@ uintptr_t DMFUnpack(uint8 *psample, cons
+ 	MemsetZero(tree);
+ 	tree.ibuf = ibuf;
+ 	tree.ibufmax = ibufmax;
+-	DMFNewNode(&tree);
++	tree.DMFNewNode();
+ 	uint8 value = 0, delta = 0;
+ 
+-	for(uint32 i = 0; i < maxlen; i++)
++	try
+ 	{
+-		int actnode = 0;
+-		uint8 sign = DMFReadBits(&tree, 1);
+-		do
+-		{
+-			if(DMFReadBits(&tree, 1))
+-				actnode = tree.nodes[actnode].right;
+-			else
+-				actnode = tree.nodes[actnode].left;
+-			if(actnode > 255) break;
+-			delta = tree.nodes[actnode].value;
+-			if((tree.ibuf >= tree.ibufmax) && (!tree.bitnum)) break;
+-		} while ((tree.nodes[actnode].left >= 0) && (tree.nodes[actnode].right >= 0));
+-		if(sign) delta ^= 0xFF;
+-		value += delta;
+-		psample[i] = (i) ? value : 0;
++		for(uint32 i = 0; i < maxlen; i++)
++		{
++			int actnode = 0;
++			uint8 sign = tree.DMFReadBits(1);
++			do
++			{
++				if(tree.DMFReadBits(1))
++					actnode = tree.nodes[actnode].right;
++				else
++					actnode = tree.nodes[actnode].left;
++				if(actnode > 255) break;
++				delta = tree.nodes[actnode].value;
++			} while((tree.nodes[actnode].left >= 0) && (tree.nodes[actnode].right >= 0));
++			if(sign) delta ^= 0xFF;
++			value += delta;
++			psample[i] = value;
++		}
++	} catch(const std::range_error &)
++	{
++		//AddToLog(LogWarning, "Truncated DMF sample block");
+ 	}
+-#ifdef DMFLOG
+-//	Log("DMFUnpack: %d remaining bytes\n", tree.ibufmax-tree.ibuf);
+-#endif
+ 	return tree.ibuf - ibuf;
+ }
+ 
+--- a/soundlib/SampleIO.cpp
++++ b/soundlib/SampleIO.cpp
+@@ -19,13 +19,14 @@
+ #ifndef MODPLUG_NO_FILESAVE
+ #include "../common/mptFileIO.h"
+ #endif
++#include <stdexcept>
+ 
+ 
+ OPENMPT_NAMESPACE_BEGIN
+ 
+ // Sample decompression routines in other source files
+ void AMSUnpack(const int8 * const source, size_t sourceSize, void * const dest, const size_t destSize, char packCharacter);
+-uint16 MDLReadBits(uint32 &bitbuf, uint32 &bitnum, const uint8 *(&ibuf), size_t &bytesLeft, int8 n);
++uint8 MDLReadBits(uint32 &bitbuf, int32 &bitnum, const uint8 *(&ibuf), size_t &bytesLeft, int8 n);
+ uintptr_t DMFUnpack(uint8 *psample, const uint8 *ibuf, const uint8 *ibufmax, uint32 maxlen);
+ 
+ 
+@@ -133,48 +134,61 @@ size_t SampleIO::ReadSample(ModSample &s
+ 	} else if(GetEncoding() == MDL && GetChannelFormat() == mono && GetBitDepth() <= 16)
+ 	{
+ 		// Huffman MDL compressed samples
+-		fileSize = file.ReadUint32LE();
+-		FileReader chunk = file.ReadChunk(fileSize);
+-		bytesRead = chunk.GetLength() + 4;
+-		if(chunk.CanRead(4))
++		if(file.CanRead(8) && (fileSize = file.ReadUint32LE()) >= 4)
+ 		{
+-			uint32 bitBuf = chunk.ReadUint32LE(), bitNum = 32;
++			FileReader chunk = file.ReadChunk(fileSize);
++			bytesRead = chunk.GetLength() + 4;
++			uint32 bitBuf = chunk.ReadUint32LE();
++			int32 bitNum = 32;
+ 
+ 			restrictedSampleDataView = chunk.GetPinnedRawDataView();
+ 			sourceBuf = restrictedSampleDataView.data();
+ 
+ 			const uint8 *inBuf = reinterpret_cast<const uint8*>(sourceBuf);
+-			size_t bytesLeft = chunk.GetLength() - 4;
++			size_t bytesLeft = chunk.BytesLeft();
+ 
+ 			uint8 dlt = 0, lowbyte = 0;
+-			const bool _16bit = GetBitDepth() == 16;
+-			for(SmpLength j = 0; j < sample.nLength; j++)
++			const bool is16bit = GetBitDepth() == 16;
++			try
+ 			{
+-				uint8 hibyte;
+-				uint8 sign;
+-				if(_16bit)
++				for(SmpLength j = 0; j < sample.nLength; j++)
+ 				{
+-					lowbyte = static_cast<uint8>(MDLReadBits(bitBuf, bitNum, inBuf, bytesLeft, 8));
+-				}
+-				sign = static_cast<uint8>(MDLReadBits(bitBuf, bitNum, inBuf, bytesLeft, 1));
+-				if (MDLReadBits(bitBuf, bitNum, inBuf, bytesLeft, 1))
+-				{
+-					hibyte = static_cast<uint8>(MDLReadBits(bitBuf, bitNum, inBuf, bytesLeft, 3));
+-				} else
+-				{
+-					hibyte = 8;
+-					while (!MDLReadBits(bitBuf, bitNum, inBuf, bytesLeft, 1)) hibyte += 0x10;
+-					hibyte += static_cast<uint8>(MDLReadBits(bitBuf, bitNum, inBuf, bytesLeft, 4));
+-				}
+-				if (sign) hibyte = ~hibyte;
+-				dlt += hibyte;
+-				if(!_16bit)
+-				{
+-					sample.pSample8[j] = dlt;
+-				} else
+-				{
+-					sample.pSample16[j] = lowbyte | (dlt << 8);
++					uint8 hibyte;
++					if(is16bit)
++					{
++						lowbyte = MDLReadBits(bitBuf, bitNum, inBuf, bytesLeft, 8);
++					}
++					bool sign = MDLReadBits(bitBuf, bitNum, inBuf, bytesLeft, 1) != 0;
++					if(MDLReadBits(bitBuf, bitNum, inBuf, bytesLeft, 1))
++					{
++						hibyte = MDLReadBits(bitBuf, bitNum, inBuf, bytesLeft, 3);
++					} else
++					{
++						hibyte = 8;
++						while(!MDLReadBits(bitBuf, bitNum, inBuf, bytesLeft, 1))
++						{
++							hibyte += 0x10;
++						}
++						hibyte += MDLReadBits(bitBuf, bitNum, inBuf, bytesLeft, 4);
++					}
++					if(sign)
++					{
++						hibyte = ~hibyte;
++					}
++					dlt += hibyte;
++					if(!is16bit)
++					{
++						sample.pSample8[j] = dlt;
++					}
++					else
++					{
++						sample.pSample16[j] = lowbyte | (dlt << 8);
++					}
+ 				}
++			} catch(const std::range_error &)
++			{
++				// Data is not sufficient to decode the whole sample
++				//AddToLog(LogWarning, "Truncated MDL sample block");
+ 			}
+ 		}
+ 	} else if(GetEncoding() == DMF && GetChannelFormat() == mono && GetBitDepth() <= 16)
+--- a/soundlib/Load_mdl.cpp
++++ b/soundlib/Load_mdl.cpp
+@@ -12,6 +12,8 @@
+ #include "Loaders.h"
+ #include "ChunkReader.h"
+ 
++#include <stdexcept>
++
+ OPENMPT_NAMESPACE_BEGIN
+ 
+ #ifdef NEEDS_PRAGMA_PACK
+@@ -933,23 +935,25 @@ bool CSoundFile::ReadMDL(FileReader &fil
+ // MDL Sample Unpacking
+ 
+ // MDL Huffman ReadBits compression
+-uint16 MDLReadBits(uint32 &bitbuf, uint32 &bitnum, const uint8 *(&ibuf), size_t &bytesLeft, int8 n)
+-//-------------------------------------------------------------------------------------------------
++uint8 MDLReadBits(uint32 &bitbuf, int32 &bitnum, const uint8 *(&ibuf), size_t &bytesLeft, int8 n)
++//-----------------------------------------------------------------------------------------------
+ {
+-	uint16 v = (uint16)(bitbuf & ((1 << n) - 1) );
+-	bitbuf >>= n;
+-	bitnum -= n;
+-	if (bitnum <= 24)
++	if(bitnum < n)
+ 	{
+-		if(!bytesLeft)
++		if(bytesLeft)
+ 		{
++			bitbuf |= (((uint32)(*ibuf++)) << bitnum);
+ 			bitnum += 8;
+-			return uint16_max;
++			bytesLeft--;
++		} else
++		{
++			throw std::range_error("Truncated MDL sample block");
+ 		}
+-		bitbuf |= (((uint32)(*ibuf++)) << bitnum);
+-		bitnum += 8;
+-		bytesLeft--;
+ 	}
++
++	uint8 v = static_cast<uint8>(bitbuf & ((1 << n) - 1));
++	bitbuf >>= n;
++	bitnum -= n;
+ 	return v;
+ }
+ 

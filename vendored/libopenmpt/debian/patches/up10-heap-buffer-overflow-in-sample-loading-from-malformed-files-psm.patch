@@ -1,0 +1,30 @@
+Description: Fix CVE-2017-11311
+ See https://lib.openmpt.org/libopenmpt/md_announce-2017-07-07.html
+ Fix heap buffer overflow which may allow arbitrary code execution via a
+ crafted PSM File.
+Origin: upstream, https://source.openmpt.org/browse/openmpt?op=revision&rev=8460
+Bug-Debian: https://bugs.debian.org/867579
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/soundlib/Load_psm.cpp
++++ b/soundlib/Load_psm.cpp
+@@ -1187,15 +1187,16 @@ bool CSoundFile::ReadPSM16(FileReader &f
+ 			}
+ 
+ 			SAMPLEINDEX smp = sampleHeader.sampleNumber;
+-			if(smp < MAX_SAMPLES)
++			if(smp > 0 && smp < MAX_SAMPLES)
+ 			{
+ 				m_nSamples = std::max(m_nSamples, smp);
+ 
+-				mpt::String::Read<mpt::String::nullTerminated>(m_szNames[smp], sampleHeader.name);
+ 				sampleHeader.ConvertToMPT(Samples[smp]);
++				mpt::String::Read<mpt::String::nullTerminated>(m_szNames[smp], sampleHeader.name);
+ 
+-				if((loadFlags & loadSampleData) && file.Seek(sampleHeader.offset))
++				if(loadFlags & loadSampleData)
+ 				{
++					file.Seek(sampleHeader.offset);
+ 					sampleHeader.GetSampleFormat().ReadSample(Samples[smp], file);
+ 				}
+ 			}

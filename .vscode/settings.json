@@ -1,0 +1,10 @@
+{
+  "files.associations": {
+    "compare": "c",
+    "cstdint": "c",
+    "fixed_dsp.h": "c",
+    "cstdlib": "cpp",
+    "chrono": "c",
+    "typeinfo": "c"
+  }
+}

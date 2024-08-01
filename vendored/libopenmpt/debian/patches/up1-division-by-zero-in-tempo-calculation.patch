@@ -1,0 +1,51 @@
+Description: Guard against division by zero in tempo calculation
+ See https://lib.openmpt.org/libopenmpt/md_announce-2017-06-02.html
+Origin: upstream, https://source.openmpt.org/browse/openmpt?op=revision&rev=8235
+Bug-Debian: https://bugs.debian.org/864195
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/soundlib/Sndfile.cpp
++++ b/soundlib/Sndfile.cpp
+@@ -1542,15 +1542,15 @@ void CSoundFile::RecalculateSamplesPerTi
+ 	{
+ 	case tempoModeClassic:
+ 	default:
+-		m_PlayState.m_nSamplesPerTick = Util::muldiv(m_MixerSettings.gdwMixingFreq, 5 * TEMPO::fractFact, m_PlayState.m_nMusicTempo.GetRaw() << 1);
++		m_PlayState.m_nSamplesPerTick = Util::muldiv(m_MixerSettings.gdwMixingFreq, 5 * TEMPO::fractFact, std::max(TEMPO::store_t(1), m_PlayState.m_nMusicTempo.GetRaw() << 1));
+ 		break;
+ 
+ 	case tempoModeModern:
+-		m_PlayState.m_nSamplesPerTick = static_cast<uint32>((Util::mul32to64_unsigned(m_MixerSettings.gdwMixingFreq, 60 * TEMPO::fractFact) * Util::mul32to64_unsigned(m_PlayState.m_nMusicSpeed, m_PlayState.m_nCurrentRowsPerBeat)) / m_PlayState.m_nMusicTempo.GetRaw());
++		m_PlayState.m_nSamplesPerTick = static_cast<uint32>((Util::mul32to64_unsigned(m_MixerSettings.gdwMixingFreq, 60 * TEMPO::fractFact) / std::max(uint64(1),  Util::mul32to64_unsigned(m_PlayState.m_nMusicSpeed, m_PlayState.m_nCurrentRowsPerBeat) * m_PlayState.m_nMusicTempo.GetRaw())));
+ 		break;
+ 
+ 	case tempoModeAlternative:
+-		m_PlayState.m_nSamplesPerTick = Util::muldiv(m_MixerSettings.gdwMixingFreq, TEMPO::fractFact, m_PlayState.m_nMusicTempo.GetRaw());
++		m_PlayState.m_nSamplesPerTick = Util::muldiv(m_MixerSettings.gdwMixingFreq, TEMPO::fractFact, std::max(TEMPO::store_t(1), m_PlayState.m_nMusicTempo.GetRaw()));
+ 		break;
+ 	}
+ #ifndef MODPLUG_TRACKER
+@@ -1572,11 +1572,11 @@ uint32 CSoundFile::GetTickDuration(PlayS
+ 	{
+ 	case tempoModeClassic:
+ 	default:
+-		retval = Util::muldiv(m_MixerSettings.gdwMixingFreq, 5 * TEMPO::fractFact, playState.m_nMusicTempo.GetRaw() << 1);
++		retval = Util::muldiv(m_MixerSettings.gdwMixingFreq, 5 * TEMPO::fractFact, std::max(TEMPO::store_t(1), playState.m_nMusicTempo.GetRaw() << 1));
+ 		break;
+ 
+ 	case tempoModeAlternative:
+-		retval = Util::muldiv(m_MixerSettings.gdwMixingFreq, TEMPO::fractFact, playState.m_nMusicTempo.GetRaw());
++		retval = Util::muldiv(m_MixerSettings.gdwMixingFreq, TEMPO::fractFact, std::max(TEMPO::store_t(1), playState.m_nMusicTempo.GetRaw()));
+ 		break;
+ 
+ 	case tempoModeModern:
+--- a/soundlib/Snd_defs.h
++++ b/soundlib/Snd_defs.h
+@@ -481,6 +481,7 @@ protected:
+ 
+ public:
+ 	static const size_t fractFact = FFact;
++	typedef T store_t;
+ 
+ 	FPInt() : v(0) { }
+ 	FPInt(const FPInt<fractFact, T> &other) : v(other.v) { }

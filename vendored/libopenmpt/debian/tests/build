@@ -1,0 +1,43 @@
+#!/bin/sh
+# autopkgtest check: Build and run simple programs against libopenmpt
+
+set -e
+
+# Require $ADTTMP for temporary build files
+if [ -z "$ADTTMP" ]
+then
+	echo 'Required envvar "$ADTTMP" is not set' >&2
+	exit 1
+fi
+
+cd debian/tests
+
+# Runs argument on the test data and ensures it's matches expected result
+run_dump() {
+	RESULT=$($1 data/test.xm)
+	if [ "$RESULT" != "$(cat data/test.expected)" ]; then
+		echo "bad result: $RESULT" 1>&2
+		exit 1
+	fi
+}
+
+# Build programs
+gcc -Wall -o "$ADTTMP/pattern-dump-c1" pattern-dump-c.c -lopenmpt
+echo "build1: OK"
+gcc -Wall -o "$ADTTMP/pattern-dump-c2" pattern-dump-c.c $(pkg-config --cflags --libs libopenmpt)
+echo "build2: OK"
+
+g++ -Wall -o "$ADTTMP/pattern-dump-cpp1" pattern-dump-cpp.cpp -lopenmpt
+echo "build3: OK"
+g++ -Wall -o "$ADTTMP/pattern-dump-cpp2" pattern-dump-cpp.cpp $(pkg-config --cflags --libs libopenmpt)
+echo "build4: OK"
+
+# Run them
+run_dump "$ADTTMP/pattern-dump-c1"
+echo "run1: OK"
+run_dump "$ADTTMP/pattern-dump-c2"
+echo "run2: OK"
+run_dump "$ADTTMP/pattern-dump-cpp1"
+echo "run3: OK"
+run_dump "$ADTTMP/pattern-dump-cpp2"
+echo "run4: OK"

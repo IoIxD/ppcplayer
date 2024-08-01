@@ -1,0 +1,25 @@
+Description: Fix out-of-bounds read while loading a malformed PLM file
+ See https://lib.openmpt.org/libopenmpt/md_announce-2017-07-07.html
+Origin: upstream, https://source.openmpt.org/browse/openmpt?op=revision&rev=8428
+Bug-Debian: https://bugs.debian.org/867579
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/soundlib/Load_plm.cpp
++++ b/soundlib/Load_plm.cpp
+@@ -376,13 +376,10 @@ bool CSoundFile::ReadPLM(FileReader &fil
+ 	}
+ 	// Module ends with the last row of the last order item
+ 	ROWINDEX endPatSize = maxPos % rowsPerPat;
+-	if(endPatSize > 0)
++	ORDERINDEX endOrder = static_cast<ORDERINDEX>(maxPos / rowsPerPat);
++	if(endPatSize > 0 && Order.IsValidPat(endOrder))
+ 	{
+-		PATTERNINDEX endPat = Order[maxPos / rowsPerPat];
+-		if(Patterns.IsValidPat(endPat))
+-		{
+-			Patterns[endPat].Resize(endPatSize, false);
+-		}
++		Patterns[Order[endOrder]].Resize(endPatSize, false);
+ 	}
+ 	// If there are still any non-existent patterns in our order list, insert some blank patterns.
+ 	PATTERNINDEX blankPat = PATTERNINDEX_INVALID;

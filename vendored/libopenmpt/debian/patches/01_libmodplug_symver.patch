@@ -1,0 +1,97 @@
+Description: Add symbol versions to the libmodplug compat library
+ This should ensure there are no symbol collisions if both the original
+ libmodplug and our libopenmpt-modplug libraries are loaded at the same time.
+Author: James Cowgill <jcowgill@debian.org>
+Forwarded: no
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -308,7 +308,7 @@ libopenmpt_la_SOURCES += libopenmpt/libo
+ 
+ if ENABLE_LIBOPENMPT_MODPLUG
+ lib_LTLIBRARIES += libopenmpt_modplug.la
+-libopenmpt_modplug_la_LDFLAGS = -version-info 1:0:0
++libopenmpt_modplug_la_LDFLAGS = -version-info 1:0:0 -Wl,--version-script=libmodplug/libmodplug.ver
+ libopenmpt_modplug_la_CPPFLAGS = -I$(srcdir)/
+ libopenmpt_modplug_la_CXXFLAGS = 
+ libopenmpt_modplug_la_CFLAGS = 
+--- /dev/null
++++ b/libmodplug/libmodplug.ver
+@@ -0,0 +1,76 @@
++LIBOPENMPT_MODPLUG1 {
++global:
++	ModPlug_ExportIT;
++	ModPlug_ExportMOD;
++	ModPlug_ExportS3M;
++	ModPlug_ExportXM;
++	ModPlug_GetCurrentOrder;
++	ModPlug_GetCurrentPattern;
++	ModPlug_GetCurrentRow;
++	ModPlug_GetCurrentSpeed;
++	ModPlug_GetCurrentTempo;
++	ModPlug_GetLength;
++	ModPlug_GetMasterVolume;
++	ModPlug_GetMessage;
++	ModPlug_GetModuleType;
++	ModPlug_GetName;
++	ModPlug_GetPattern;
++	ModPlug_GetPlayingChannels;
++	ModPlug_GetSettings;
++	ModPlug_InitMixerCallback;
++	ModPlug_InstrumentName;
++	ModPlug_Load;
++	ModPlug_NumChannels;
++	ModPlug_NumInstruments;
++	ModPlug_NumPatterns;
++	ModPlug_NumSamples;
++	ModPlug_Read;
++	ModPlug_SampleName;
++	ModPlug_Seek;
++	ModPlug_SeekOrder;
++	ModPlug_SetMasterVolume;
++	ModPlug_SetSettings;
++	ModPlug_Unload;
++	ModPlug_UnloadMixerCallback;
++	_ZN10CSoundFile10gdwSysInfoE;
++	_ZN10CSoundFile10gnCPUUsageE;
++	_ZN10CSoundFile10gnChannelsE;
++	_ZN10CSoundFile12gnReverbTypeE;
++	_ZN10CSoundFile12gpSndMixHookE;
++	_ZN10CSoundFile13SetCurrentPosEj;
++	_ZN10CSoundFile13SetWaveConfigEjjjb;
++	_ZN10CSoundFile13gdwMixingFreqE;
++	_ZN10CSoundFile13gdwSoundSetupE;
++	_ZN10CSoundFile13m_nXBassDepthE;
++	_ZN10CSoundFile13m_nXBassRangeE;
++	_ZN10CSoundFile14m_nReverbDelayE;
++	_ZN10CSoundFile14m_nReverbDepthE;
++	_ZN10CSoundFile15GetSongCommentsEPcjj;
++	_ZN10CSoundFile15SetWaveConfigExEbbbbbbb;
++	_ZN10CSoundFile15gnBitsPerSampleE;
++	_ZN10CSoundFile15m_nStreamVolumeE;
++	_ZN10CSoundFile16m_nProLogicDelayE;
++	_ZN10CSoundFile16m_nProLogicDepthE;
++	_ZN10CSoundFile17SetResamplingModeEj;
++	_ZN10CSoundFile17m_nMaxMixChannelsE;
++	_ZN10CSoundFile18SetXBassParametersEjj;
++	_ZN10CSoundFile19SetReverbParametersEjj;
++	_ZN10CSoundFile19gnVolumeRampSamplesE;
++	_ZN10CSoundFile19m_nStereoSeparationE;
++	_ZN10CSoundFile21SetSurroundParametersEjj;
++	_ZN10CSoundFile21gpMixPluginCreateProcE;
++	_ZN10CSoundFile4ReadEPvj;
++	_ZN10CSoundFile5gnAGCE;
++	_ZN10CSoundFile6CreateEPKhj;
++	_ZN10CSoundFile7DestroyEv;
++	_ZN10CSoundFile9GetLengthEbb;
++	_ZN10CSoundFile9gnVUMeterE;
++	_ZN10CSoundFileC1Ev;
++	_ZN10CSoundFileC2Ev;
++	_ZN10CSoundFileD1Ev;
++	_ZN10CSoundFileD2Ev;
++	_ZNK10CSoundFile13GetCurrentPosEv;
++	_ZNK10CSoundFile14GetMaxPositionEv;
++local:
++	*;
++};

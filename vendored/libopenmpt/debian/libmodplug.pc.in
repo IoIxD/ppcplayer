@@ -1,0 +1,10 @@
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${prefix}/lib/@DEB_HOST_MULTIARCH@
+includedir=${prefix}/include
+
+Name: libmodplug
+Description: The ModPlug mod file playing library (emulated via libopenmpt).
+Version: 0.8.8.5
+Libs: -L${libdir} -lmodplug
+Cflags: -I${includedir}

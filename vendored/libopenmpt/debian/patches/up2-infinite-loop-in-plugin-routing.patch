@@ -1,0 +1,22 @@
+Description: Fix infinite loop with cyclic plugin routing
+ See https://lib.openmpt.org/libopenmpt/md_announce-2017-06-02.html
+Origin: upstream, https://source.openmpt.org/browse/openmpt?op=revision&rev=8236
+Bug-Debian: https://bugs.debian.org/864195
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/soundlib/Fastmix.cpp
++++ b/soundlib/Fastmix.cpp
+@@ -597,10 +597,11 @@ void CSoundFile::ProcessPlugins(uint32 n
+ 					// Samples or plugins are being rendered, so turn off auto-bypass for this master effect.
+ 					if(plugin.pMixPlugin != nullptr) plugin.pMixPlugin->ResetSilence();
+ 					SNDMIXPLUGIN *chain = &plugin;
+-					PLUGINDEX out = chain->GetOutputPlugin();
+-					while(out > plug && out < MAX_MIXPLUGINS)
++					PLUGINDEX out = chain->GetOutputPlugin(), prevOut = plug;
++					while(out > prevOut && out < MAX_MIXPLUGINS)
+ 					{
+ 						chain = &m_MixPlugins[out];
++						prevOut = out;
+ 						out = chain->GetOutputPlugin();
+ 						if(chain->pMixPlugin)
+ 						{

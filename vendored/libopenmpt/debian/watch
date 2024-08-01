@@ -1,0 +1,4 @@
+version=4
+
+opts=uversionmangle=s/-/~/ \
+https://lib.openmpt.org/files/libopenmpt/src/libopenmpt@ANY_VERSION@-autotools@ARCHIVE_EXT@

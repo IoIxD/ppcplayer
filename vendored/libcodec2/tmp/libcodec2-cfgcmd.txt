@@ -1,0 +1,1 @@
+cmd='/home/gavin/Projects/os9ffmpegplayer/vendored/libcodec2/configure;--prefix=/home/gavin/Projects/os9ffmpegplayer/lib;--arch=ppc32;--target-os=none;--cross-prefix=powerpc-apple-macos-;--enable-cross-compile;--disable-pthreads;--disable-altivec'

@@ -1,0 +1,45 @@
+Description: Fix excessive CPU consumption on malformed AMS files
+ See https://lib.openmpt.org/libopenmpt/md_announce-2017-06-02.html
+ This patch prevents loading of AMS modules taking multiple minutes if the
+ module contains truncated samples.
+Origin: upstream, https://source.openmpt.org/browse/openmpt?op=revision&rev=8239
+Bug-Debian: https://bugs.debian.org/864195
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/soundlib/Load_ams.cpp
++++ b/soundlib/Load_ams.cpp
+@@ -1024,6 +1024,7 @@ void AMSUnpack(const int8 * const source
+ //------------------------------------------------------------------------------------------------------------------------
+ {
+ 	std::vector<int8> tempBuf(destSize, 0);
++	size_t depackSize = destSize;
+ 
+ 	// Unpack Loop
+ 	{
+@@ -1058,6 +1059,8 @@ void AMSUnpack(const int8 * const source
+ 				j--;
+ 			}
+ 		}
++		// j should only be non-zero for truncated samples
++		depackSize -= j;
+ 	}
+ 
+ 	// Bit Unpack Loop
+@@ -1066,7 +1069,7 @@ void AMSUnpack(const int8 * const source
+ 		uint16 bitcount = 0x80;
+ 		size_t k = 0;
+ 		uint8 *dst = static_cast<uint8 *>(dest);
+-		for(size_t i = 0; i < destSize; i++)
++		for(size_t i = 0; i < depackSize; i++)
+ 		{
+ 			uint8 al = *out++;
+ 			uint16 dh = 0;
+@@ -1090,7 +1093,7 @@ void AMSUnpack(const int8 * const source
+ 	{
+ 		int8 old = 0;
+ 		int8 *out = static_cast<int8 *>(dest);
+-		for(size_t i = destSize; i != 0; i--)
++		for(size_t i = depackSize; i != 0; i--)
+ 		{
+ 			int pos = *reinterpret_cast<uint8 *>(out);
+ 			if(pos != 128 && (pos & 0x80) != 0)

@@ -1,0 +1,95 @@
+libopenmpt (0.2.7386~beta20.3-3+deb9u3ev3dev1) stable; urgency=medium
+
+  * Add patch to fix stack overflow on library initialization (Closes: #916222)
+    - up12: Fix dlopen() crashes caused by a big stack allocation
+      happening in libopenmpt initialization code.
+
+ -- Jakub Vanek <linuxtardis@gmail.com>  Wed, 12 Dec 2018 01:28:33 +0100
+
+libopenmpt (0.2.7386~beta20.3-3+deb9u3) stretch; urgency=medium
+
+  * Add patch to fix CVE-2018-10017 (Closes: #895406).
+    - up11: Out-of-bounds read loading IT / MO3 files with many pattern loops.
+
+ -- James Cowgill <jcowgill@debian.org>  Thu, 12 Apr 2018 10:14:53 +0100
+
+libopenmpt (0.2.7386~beta20.3-3+deb9u2) stretch; urgency=medium
+
+  * Add security patches (Closes: #867579).
+    - up8: Out-of-bounds read while loading a malfomed PLM file.
+    - up10: CVE-2017-11311: Arbitrary code execution by a crafted PSM file.
+
+ -- James Cowgill <jcowgill@debian.org>  Sat, 15 Jul 2017 18:33:57 +0100
+
+libopenmpt (0.2.7386~beta20.3-3+deb9u1) stretch; urgency=medium
+
+  * Add various security patches (Closes: #864195).
+    - up1: Division by zero in temp calculation.
+    - up2: Infinite loop with cyclic plugin routing.
+    - up3: Excessive CPU consumption on malformed DMF and MDL files.
+    - up5: Excessive CPU consumption on malformed AMS files.
+    - up6: Invalid memory read when applying NNAs to effect plugins.
+
+ -- James Cowgill <jcowgill@debian.org>  Tue, 20 Jun 2017 08:58:50 +0100
+
+libopenmpt (0.2.7386~beta20.3-3) unstable; urgency=medium
+
+  * debian/tests:
+    - Depend on build-essential in all autopkgtests. This should fix the
+      recent autopkgtest failures.
+
+ -- James Cowgill <jcowgill@debian.org>  Thu, 12 Jan 2017 17:17:13 +0000
+
+libopenmpt (0.2.7386~beta20.3-2) unstable; urgency=medium
+
+  * Enable libmodplug compatibility layer.
+    - Add libopenmpt-modplug-dev and libopenmpt-modplug1.
+    - Add autopkgtest for libmodplug compat layer.
+    - Add ELF symbol versioning to all the symbols exported by the
+      compatibility layer.
+
+  * debian/control:
+    - Build-Conflicts against autoconf-archive.
+    - Drop "decoding" from the short description to make more room.
+  * debian/rules:
+    - Disable static library in configure invocation.
+
+ -- James Cowgill <jcowgill@debian.org>  Sun, 08 Jan 2017 10:38:40 +0000
+
+libopenmpt (0.2.7386~beta20.3-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- James Cowgill <jcowgill@debian.org>  Fri, 25 Nov 2016 09:42:47 +0000
+
+libopenmpt (0.2.7299~beta20.2-2) unstable; urgency=medium
+
+  * debian/control:
+    - Add extra dependencies to libopenmpt-dev to satisfy pkg-config. Should
+      fix autopkgtest failures.
+  * debian/libopenmpt-dev.install:
+    - Drop static library.
+  * debian/watch:
+    - Remove hyphen before @ANY_VERSION@ in watch file.
+
+ -- James Cowgill <jcowgill@debian.org>  Sat, 12 Nov 2016 15:31:14 +0000
+
+libopenmpt (0.2.7299~beta20.2-1) unstable; urgency=medium
+
+  * New upstream release.
+
+  * debian/patches:
+    - Drop 01_openmpt123-whatis.patch - applied upstream.
+  * debian/rules:
+    - Use dh_autoreconf --as-needed.
+    - Install libopenmpt/dox/changelog.md as the upstream changelog.
+  * debian/tests:
+    - Add pkg-config to autopkgtest dependencies.
+
+ -- James Cowgill <jcowgill@debian.org>  Wed, 09 Nov 2016 15:55:27 +0000
+
+libopenmpt (0.2.7025~beta20.1-1) unstable; urgency=medium
+
+  * Initial release. (Closes: #839185)
+
+ -- James Cowgill <jcowgill@debian.org>  Mon, 03 Oct 2016 10:04:29 +0100

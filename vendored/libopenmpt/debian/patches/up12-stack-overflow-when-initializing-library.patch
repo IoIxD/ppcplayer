@@ -1,0 +1,46 @@
+Description: Fix stack overflow crash on library initialization
+ Fix dlopen() crashes caused by a big stack allocation
+ happening in libopenmpt initialization code.
+Origin: upstream, https://source.openmpt.org/browse/openmpt?op=revision&rev=9183, https://source.openmpt.org/browse/openmpt?op=revision&rev=9184
+Bug-Debian: https://bugs.debian.org/916222
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/soundlib/Tables.cpp
++++ b/soundlib/Tables.cpp
+@@ -1008,9 +1008,16 @@
+ 
+ #ifdef MPT_RESAMPLER_TABLES_CACHED
+ 
+-void CResampler::InitializeTablesFromCache()
++static const CResampler & GetCachedResampler()
+ {
+ 	static CResampler s_CachedResampler(true);
++	return s_CachedResampler;	
++}
++
++
++void CResampler::InitializeTablesFromCache()
++{
++	const CResampler & s_CachedResampler = GetCachedResampler();
+ 	InitFloatmixerTables();
+ 	std::copy(s_CachedResampler.gKaiserSinc, s_CachedResampler.gKaiserSinc + SINC_PHASES*8, gKaiserSinc);
+ 	std::copy(s_CachedResampler.gDownsample13x, s_CachedResampler.gDownsample13x + SINC_PHASES*8, gDownsample13x);
+@@ -1023,14 +1030,14 @@
+ 
+ #ifdef MPT_RESAMPLER_TABLES_CACHED_ONSTARTUP
+ 
+-struct ResampleCacheInitialzer
++struct ResampleCacheInitializer
+ {
+-	ResampleCacheInitialzer()
++	ResampleCacheInitializer()
+ 	{
+-		CResampler cachePrimer;
++		GetCachedResampler();
+ 	}
+ };
+-static ResampleCacheInitialzer g_ResamplerCachePrimer;
++static ResampleCacheInitializer g_ResamplerCachePrimer;
+ 
+ #endif // MPT_RESAMPLER_TABLES_CACHED_ONSTARTUP
+ 
