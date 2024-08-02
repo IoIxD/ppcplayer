@@ -1,184 +1,17 @@
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libswscale/swscale.h>
+#include "ff.h"
 
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "audio.h"
-
-typedef struct AVList
-{
-    AVPacket self;
-    struct AVList *next;
-} AVList;
-
-typedef struct
-{
-    AVList *head;
-    AVList *last;
-    int size;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-    AVCodecContext *codecCtx;
-} PQueue;
-
-PQueue pq;
-
-void init_pq()
-{
-    pq.head = NULL;
-    pq.last = NULL;
-    pq.size = 0;
-    pq.codecCtx = NULL;
-}
-
-bool pq_empty()
-{
-    return pq.size == 0;
-}
-
-void pq_put(AVPacket packet)
-{
-    printf("putting...\n");
-
-    AVList *node = malloc(sizeof(AVList));
-    node->self = packet;
-    node->next = NULL;
-    if (pq_empty())
-    {
-        pq.head = node;
-        pq.last = node;
-    }
-    else
-    {
-        pq.last->next = node;
-        pq.last = node;
-    }
-    pq.size++;
-}
-
-AVPacket pq_get()
-{
-    printf("getting...\n");
-
-    while (pq_empty())
-    {
-    }
-    AVList *node = pq.head;
-    pq.head = pq.head->next;
-    AVPacket p = node->self;
-    free(node);
-    if (pq.head == NULL)
-    {
-        pq.last = NULL;
-    }
-    pq.size--;
-    return p;
-}
-
-void pq_free()
-{
-    // Free all nodes
-    printf("total %d node found, destroying them...\n", pq.size);
-    AVList *node = pq.head;
-    while (node != NULL)
-    {
-        AVList *next = node->next;
-        av_packet_unref(&node->self);
-        free(node);
-        node = next;
-    }
-}
-
-int audio_decode_frame(uint8_t *buf)
-{
-    AVPacket packet = pq_get();
-    int ret = avcodec_send_packet(pq.codecCtx, &packet);
-    if (ret < 0)
-    {
-        printf("Error sending a packet for decoding\n");
-        av_packet_unref(&packet);
-        return -1;
-    }
-    AVFrame *frame = av_frame_alloc();
-
-    ret = avcodec_receive_frame(pq.codecCtx, frame);
-    if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
-    {
-        av_frame_free(&frame);
-        av_packet_unref(&packet);
-        return -1;
-    }
-    else if (ret < 0)
-    {
-        printf("Error during decoding\n");
-        av_frame_free(&frame);
-        av_packet_unref(&packet);
-        return -1;
-    }
-    // Got frame
-    // uint f_size = frame->linesize[0];
-    // uint b_ch = f_size / pq.codecCtx->ch_layout.nb_channels;
-    int res = audio_resampling(pq.codecCtx, frame, AV_SAMPLE_FMT_FLT, 2, 44100, buf);
-
-    av_frame_free(&frame);
-    av_packet_unref(&packet);
-    return res;
-}
-
-void audio_callback(void *buffer, unsigned int frames)
-{
-    // uint8_t *origin = (uint8_t *)buffer;
-    uint8_t *dbuf = (uint8_t *)buffer;
-    static uint8_t audio_buf[19200];
-    static unsigned int audio_buf_size = 0;
-    static unsigned int audio_buf_index = 0;
-    int len1 = -1;
-    int audio_size = -1;
-    int len = frames * sizeof(float) * 2; // Stereo
-    static int jj = 0;
-    ++jj;
-    printf("AFrame: %d, %d\n", jj, pq.size);
-    while (len > 0)
-    {
-        if (audio_buf_index >= audio_buf_size)
-        {
-            audio_size = audio_decode_frame(audio_buf);
-            if (audio_size < 0)
-            {
-                // output silence
-                printf("Skipped one frame.\n");
-                continue;
-            }
-            else
-            {
-                audio_buf_size = audio_size;
-            }
-            audio_buf_index = 0;
-        }
-        len1 = audio_buf_size - audio_buf_index;
-
-        if (len1 > len)
-        {
-            len1 = len;
-        }
-
-        memcpy(dbuf, audio_buf + audio_buf_index, len1);
-
-        len -= len1;
-        dbuf += len1;
-        audio_buf_index += len1;
-    }
-}
+#include "SDL.h"
 
 int main()
 {
+    printf("Enter file name (must be relative to program path): \n");
     char *buf;
     scanf("%s", buf);
+
+    SDL_Event event;
+    SDL_Init(SDL_INIT_EVERYTHING);
+    SDL_WM_SetCaption(buf, NULL);
+
     // int screenWidth = 1280;
     // int screenHeight = 720;
 
@@ -220,6 +53,7 @@ int main()
             continue;
         }
     }
+
     if (!videoStream)
     {
         printf("Could not find video stream.\n");
@@ -253,6 +87,37 @@ int main()
     sws_ctx = sws_getContext(videoCodecCtx->width, videoCodecCtx->height, videoCodecCtx->pix_fmt,
                              videoCodecCtx->width, videoCodecCtx->height, AV_PIX_FMT_RGB24,
                              SWS_FAST_BILINEAR, 0, 0, 0);
+
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+    int rmask = 0xff000000;
+    int gmask = 0x00ff0000;
+    int bmask = 0x0000ff00;
+    int amask = 0x000000ff;
+#else
+    int rmask = 0x000000ff;
+    int gmask = 0x0000ff00;
+    int bmask = 0x00ff0000;
+    int amask = 0xff000000;
+#endif
+
+    SDL_SetVideoMode(videoPar->width, videoPar->height, 24, SDL_SWSURFACE);
+    SDL_Surface *surface = SDL_CreateRGBSurface(SDL_SWSURFACE, videoCodecCtx->width, videoCodecCtx->height, 24, rmask, gmask, bmask, amask);
+
+    SDL_Overlay *bmp = SDL_CreateYUVOverlay(videoCodecCtx->width, videoCodecCtx->height, SDL_YV12_OVERLAY, &surface);
+    struct SwsContext *img_convert_context;
+    img_convert_context = sws_getCachedContext(NULL,
+                                               videoCodecCtx->width, videoCodecCtx->height,
+                                               videoCodecCtx->pix_fmt,
+                                               videoCodecCtx->width, videoCodecCtx->height,
+                                               AV_PIX_FMT_YUV420P, SWS_BICUBIC,
+                                               NULL, NULL, NULL);
+
+    if (surface == NULL)
+    {
+        fprintf(stderr, "CreateRGBSurface failed: %s\n", SDL_GetError());
+        goto end;
+    }
+
     // texture.height = videoCodecCtx->height;
     // texture.width = videoCodecCtx->width;
     // texture.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
@@ -266,40 +131,64 @@ int main()
     // PlayAudioStream(rayAStream);
 
     pRGBFrame = av_frame_alloc();
-    pRGBFrame->format = AV_PIX_FMT_RGB24;
+    pRGBFrame->format = AV_PIX_FMT_YUV420P;
     pRGBFrame->width = videoCodecCtx->width;
     pRGBFrame->height = videoCodecCtx->height;
     av_frame_get_buffer(pRGBFrame, 0);
     int vframe = 0;
-    // while (!WindowShouldClose())
+
     while (1)
     {
         vframe++;
+
         // sprintf("VFrame %d\n", vframe);
         while (av_read_frame(pFormatCtx, packet) >= 0)
         {
             if (packet->stream_index == videoStream->index)
             {
                 // Getting frame from video
-                printf("avcodec_send_packet\n");
+                // printf("avcodec_send_packet\n");
                 int ret = avcodec_send_packet(videoCodecCtx, packet);
                 if (ret < 0)
                 {
                     // Error
-                    printf("Error sending packet\n");
+                    // printf("Error sending packet\n");
                     continue;
                 }
                 while (ret >= 0)
                 {
-                    printf("avcodec_receive_frame\n");
+                    // printf("avcodec_receive_frame\n");
                     ret = avcodec_receive_frame(videoCodecCtx, frame);
                     if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
                     {
                         break;
                     }
-                    printf("sws_scale\n");
+                    // printf("sws_scale\n");
+
+                    SDL_LockYUVOverlay(bmp);
+
+                    // Convert frame to YV12 pixel format for display in SDL overlay
+
+                    pRGBFrame->data[0] = bmp->pixels[0];
+                    pRGBFrame->data[1] = bmp->pixels[2]; // it's because YV12
+                    pRGBFrame->data[2] = bmp->pixels[1];
+
+                    pRGBFrame->linesize[0] = bmp->pitches[0];
+                    pRGBFrame->linesize[1] = bmp->pitches[2];
+                    pRGBFrame->linesize[2] = bmp->pitches[1];
+
                     sws_scale(sws_ctx, (uint8_t const *const *)frame->data, frame->linesize, 0,
                               frame->height, pRGBFrame->data, pRGBFrame->linesize);
+
+                    SDL_UnlockYUVOverlay(bmp);
+
+                    SDL_Rect rect;
+                    rect.x = 0;
+                    rect.y = 0;
+                    rect.w = videoCodecCtx->width;
+                    rect.h = videoCodecCtx->height;
+                    SDL_DisplayYUVOverlay(bmp, &rect);
+
                     //  UpdateTexture(texture, pRGBFrame->data[0]);
                 }
                 break;
@@ -312,17 +201,19 @@ int main()
             }
             av_packet_unref(packet);
         }
-
-        // BeginDrawing();
-        // ClearBackground(WHITE);
-
-        // DrawTexturePro(texture, (Rectangle){0, 0, texture.width, texture.height},
-        //               (Rectangle){0, 0, screenWidth, screenHeight}, (Vector2){0, 0}, 0, WHITE);
-
-        // DrawFPS(0, 0);
-
-        // EndDrawing();
     }
+
+    // BeginDrawing();
+    // ClearBackground(WHITE);
+
+    // DrawTexturePro(texture, (Rectangle){0, 0, texture.width, texture.height},
+    //               (Rectangle){0, 0, screenWidth, screenHeight}, (Vector2){0, 0}, 0, WHITE);
+
+    // DrawFPS(0, 0);
+
+    // EndDrawing();
+
+    SDL_Quit();
     // UnloadTexture(texture);
     // UnloadAudioStream(rayAStream);
 
@@ -338,7 +229,10 @@ int main()
 
     avformat_close_input(&pFormatCtx);
     pq_free();
+
     printf("Program exit.\n");
+
+end:
     getchar();
     return 0;
 }

@@ -12,6 +12,12 @@
     "codec_internal.h": "c",
     "*.ipp": "c",
     "typeindex": "c",
-    "thread": "c"
+    "thread": "c",
+    "ff.h": "c",
+    "sdl.h": "c",
+    "array": "c",
+    "string": "c",
+    "string_view": "c",
+    "span": "c"
   }
 }

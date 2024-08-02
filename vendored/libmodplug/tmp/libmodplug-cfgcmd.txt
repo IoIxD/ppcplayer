@@ -1,1 +1,0 @@
-cmd='libtoolize;&&;aclocal;&&;autoupdate;&&;automake;--add-missing;&&;autoreconf;-fvi;&&;/home/gavin/Projects/os9ffmpegplayer/vendored/libmodplug/configure;--prefix=/home/gavin/Projects/os9ffmpegplayer/lib'

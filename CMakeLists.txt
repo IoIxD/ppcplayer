@@ -13,11 +13,10 @@ project(os9player LANGUAGES C CXX)
 # invoked and put all files that match the pattern in the variables
 # `sources` and `data`
 file(GLOB_RECURSE sources   
-src/**/**/**/*.c src/**/**/**/*.h src/**/**/**/*.cpp src/**/**/**/*.hpp 
-src/**/**/*.c src/**/**/*.h src/**/**/*.cpp src/**/**/*.hpp 
-src/**/*.c src/**/*.h src/**/*.cpp src/**/*.hpp 
-src/*.c src/*.h src/*.cpp src/*.hpp
-
+    src/**/**/**/*.c src/**/**/**/*.h src/**/**/**/*.cpp src/**/**/**/*.hpp 
+    src/**/**/*.c src/**/**/*.h src/**/**/*.cpp src/**/**/*.hpp 
+    src/**/*.c src/**/*.h src/**/*.cpp src/**/*.hpp 
+    src/*.c src/*.h src/*.cpp src/*.hpp
 )
 file(GLOB_RECURSE data resources/*)
 # you can use set(sources src/main.cpp) etc if you don't want to
@@ -49,42 +48,15 @@ target_link_libraries( os9player PowerMgrLib)
 target_link_libraries( os9player NameRegistryLib)
 target_link_libraries( os9player OpenGL)
 endif()
-
-include(ExternalProject)
  
 message(CMAKE_C_COMPILER ": " ${CMAKE_C_COMPILER})
 message(CMAKE_CXX_COMPILER ": " ${CMAKE_CXX_COMPILER})
 
+
+
+# FFMPEG
 include_directories(${CMAKE_SOURCE_DIR}/vendored/FFmpeg)
-#include_directories(${CMAKE_SOURCE_DIR}/vendored/libass)
 include(ExternalProject)
-
-macro(add_vendored __lib__ __extra_args__)  
-    ExternalProject_Add(
-        lib${__lib__}
-        SOURCE_DIR ${CMAKE_SOURCE_DIR}/vendored/lib${__lib__}
-        CONFIGURE_COMMAND libtoolize && aclocal && autoupdate && automake --add-missing && autoreconf -fvi && ${CMAKE_SOURCE_DIR}/vendored/lib${__lib__}/configure --prefix=${CMAKE_SOURCE_DIR}/lib ${__extra_args__} 
-        PREFIX ${CMAKE_SOURCE_DIR}/vendored/lib${__lib__}
-        BUILD_COMMAND make -j$(nproc)
-        BUILD_IN_SOURCE 1
-    )
-    include_directories(${CMAKE_SOURCE_DIR}/vendored/lib${__lib__}/src)
-    include_directories(${CMAKE_SOURCE_DIR}/vendored/lib${__lib__}/include)
-    target_link_libraries(os9player ${__lib__} STATIC)
-endmacro()
-
-#add_subdirectory(vendored/gme)
-#include_directories(BEFORE ${CMAKE_SOURCE_DIR}/vendored/gme)
-# add_vendored(modplug "")
-# add_vendored(mp3lame "")
-#target_link_libraries(os9player gme)
-
-#target_link_libraries(os9player xavs)
-#add_vendored(vorbis true)
-#add_vendored(x264 true)
-#add_vendored(x265 true)
-#add_vendored(cdio true)
-
 ExternalProject_Add(
     libff
     SOURCE_DIR ${CMAKE_SOURCE_DIR}/vendored/FFmpeg
@@ -93,6 +65,7 @@ ExternalProject_Add(
     BUILD_COMMAND make -j$(nproc)
     BUILD_IN_SOURCE 1
 )
+
 
 add_dependencies(os9player libff)
 target_link_directories(os9player PUBLIC ${CMAKE_SOURCE_DIR}/lib/lib/)
@@ -105,6 +78,10 @@ target_link_libraries(os9player m)
 target_link_libraries(os9player avcodec)
 target_link_libraries(os9player swresample)
 target_link_libraries(os9player swscale)
+
+include_directories(${CMAKE_SOURCE_DIR}/vendored/include)
+link_directories(${CMAKE_SOURCE_DIR}/vendored/lib)
+target_link_libraries(os9player ${CMAKE_SOURCE_DIR}/vendored/lib/libsdl.a)
 
 
 include_directories( "${RETRO68_TOOLCHAIN}universal/CIncludes/")
