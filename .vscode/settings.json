@@ -18,6 +18,15 @@
     "array": "c",
     "string": "c",
     "string_view": "c",
-    "span": "c"
+    "span": "c",
+    "stdint.h": "c",
+    "deque": "c",
+    "list": "c",
+    "unordered_map": "c",
+    "vector": "c",
+    "format": "c",
+    "initializer_list": "c",
+    "pthread.h": "c",
+    "complex": "c"
   }
 }
