@@ -55,13 +55,11 @@ void retro::InitConsole()
     InitWindows();
     InitMenus();
 
-    int width = qd.screenBits.bounds.right / 2;
-    int height = qd.screenBits.bounds.bottom / 2;
     Rect r = (Rect){
-        .top = height / 2,
-        .left = width / 2,
-        .bottom = height + (height / 2),
-        .right = width + (width / 2),
+        .top = 0,
+        .left = 0,
+        .bottom = 128,
+        .right = qd.screenBits.bounds.right,
     };
 #else
     Rect r = (*GetMainDevice())->gdRect;
