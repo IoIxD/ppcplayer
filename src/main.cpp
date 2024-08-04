@@ -3,9 +3,10 @@
 #include "GL/glext.h"
 #include "GL/glut.h"
 #include "player.hpp"
-#include <set>
+#include <chrono>
 // #include "console/Console.hpp"
 #include "macros.h"
+#include <time.h>
 
 static player::Player *pl = NULL;
 
@@ -17,6 +18,10 @@ int window;
 GLint format = GL_RGB;
 void InitTexture(GLsizei width, GLsizei height, uint8_t *data);
 
+int getTime()
+{
+    return std::chrono::time_point<std::chrono::system_clock>{}.time_since_epoch().count();
+}
 int main(int argc, char **argv)
 {
     printf("Type a file to open: \n");
@@ -77,14 +82,23 @@ void UpdateTexture(GLsizei width, GLsizei height, uint8_t *data)
     GL_COMMAND(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
 }
 
+#include <unistd.h>
+
+static double start_render;
+static double end_render;
+static double last_render_time;
+
+static double render_time = 0;
 void idle(void)
 {
+    auto framerate = (float)pl->framerate() / 1000;
     pl->step();
     GL_COMMAND(glutPostRedisplay());
+    usleep(1000000.0 / framerate);
 }
-
 void display_hasVideo(void)
 {
+
     GL_COMMAND(glClearColor(1.0f, 0.0f, 1.0f, 1.0f));
     GL_COMMAND(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
     GL_COMMAND(glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL));

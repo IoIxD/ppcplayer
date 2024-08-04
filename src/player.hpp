@@ -33,6 +33,11 @@ namespace player
         float widthDiff;
         float heightDiff;
 
+        int framerate()
+        {
+            return this->videoCodecCtx->framerate.num;
+        }
+
         AVFrame *pRGBFrame = NULL;
         Player(char *buf);
 
