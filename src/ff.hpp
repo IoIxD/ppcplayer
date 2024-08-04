@@ -14,6 +14,11 @@ extern "C"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "GL/gl.h"
+
+#include "macros.h"
+
+    GLint ffmpeg_pix_format_to_gl(int pix_format);
     int audio_resampling(AVCodecContext *audio_decode_ctx, AVFrame *decoded_audio_frame,
                          enum AVSampleFormat out_sample_fmt, int out_channels, int out_sample_rate,
                          uint8_t *out_buf);

@@ -27,6 +27,8 @@
     "format": "c",
     "initializer_list": "c",
     "pthread.h": "c",
-    "complex": "c"
+    "complex": "c",
+    "cmath": "cpp",
+    "*.tcc": "cpp"
   }
 }
