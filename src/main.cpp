@@ -6,7 +6,8 @@
 #include <chrono>
 // #include "console/Console.hpp"
 #include "macros.h"
-#include <time.h>
+
+#include <Timer.h>
 
 static player::Player *pl = NULL;
 
@@ -18,12 +19,15 @@ int window;
 GLint format = GL_RGB;
 void InitTexture(GLsizei width, GLsizei height, uint8_t *data);
 
-int getTime()
+auto getTime()
 {
-    return std::chrono::time_point<std::chrono::system_clock>{}.time_since_epoch().count();
+    return std::chrono::system_clock::now();
 }
+
+static QElem what;
 int main(int argc, char **argv)
 {
+    InsTime(&what);
     printf("Type a file to open: \n");
     char buf[255];
     scanf("%s", &buf);
@@ -82,19 +86,13 @@ void UpdateTexture(GLsizei width, GLsizei height, uint8_t *data)
     GL_COMMAND(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
 }
 
-#include <unistd.h>
-
-static double start_render;
-static double end_render;
-static double last_render_time;
-
-static double render_time = 0;
 void idle(void)
 {
-    auto framerate = (float)pl->framerate() / 1000;
+    auto framerate = pl->framerate();
     pl->step();
     GL_COMMAND(glutPostRedisplay());
-    usleep(1000000.0 / framerate);
+
+    PrimeTime(&what, framerate);
 }
 void display_hasVideo(void)
 {
