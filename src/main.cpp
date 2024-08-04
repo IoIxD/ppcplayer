@@ -28,12 +28,20 @@ int main(int argc, char **argv)
     /* start of glut windowing and control functions */
     GL_COMMAND(glutInit(&argc, argv));
     GL_COMMAND(glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH));
-    GL_COMMAND(glutInitWindowSize(pl->pRGBFrame->width, pl->pRGBFrame->height));
 
-    auto frame = pl->pRGBFrame;
-    InitTexture(frame->width, frame->height, frame->data[0]);
+    if (pl->hasVideo)
+    {
+        GL_COMMAND(glutInitWindowSize(pl->realWidth, pl->realHeight));
 
-    format = ffmpeg_pix_format_to_gl(pl->pRGBFrame->format);
+        auto frame = pl->pRGBFrame;
+        InitTexture(frame->width, frame->height, frame->data[0]);
+
+        format = ffmpeg_pix_format_to_gl(pl->pRGBFrame->format);
+    }
+    else
+    {
+        GL_COMMAND(glutInitWindowSize(512, 384));
+    }
 
     window = GL_COMMAND(glutCreateWindow(buf));
 
@@ -75,7 +83,7 @@ void idle(void)
     GL_COMMAND(glutPostRedisplay());
 }
 
-void display(void)
+void display_hasVideo(void)
 {
     GL_COMMAND(glClearColor(1.0f, 0.0f, 1.0f, 1.0f));
     GL_COMMAND(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
@@ -91,11 +99,12 @@ void display(void)
     GL_COMMAND(glEnable(GL_TEXTURE_2D));
 
     glBegin(GL_QUADS);
-    glTexCoord2f(0.0, 1.0);
+
+    glTexCoord2f(0.0, pl->heightDiff);
     glVertex2f(-1.0, -1.0);
-    glTexCoord2f(1.0, 1.0);
+    glTexCoord2f(pl->widthDiff, pl->heightDiff);
     glVertex2f(1.0, -1.0);
-    glTexCoord2f(1.0, 0.0);
+    glTexCoord2f(pl->widthDiff, 0.0);
     glVertex2f(1.0, 1.0);
     glTexCoord2f(0.0, 0.0);
     glVertex2f(-1.0, 1.0);
@@ -103,6 +112,25 @@ void display(void)
 
     GL_COMMAND(glutSwapBuffers());
     GL_COMMAND(glPopMatrix());
+}
+
+void display_onlyAudio(void)
+{
+    GL_COMMAND(glClearColor(1.0f, 1.0f, 1.0f, 1.0f));
+
+    GL_COMMAND(glutSwapBuffers());
+}
+
+void display(void)
+{
+    if (pl->hasVideo)
+    {
+        display_hasVideo();
+    }
+    else
+    {
+        display_onlyAudio();
+    }
 }
 
 void PauseIfGLError(const char *file, int line_num, const char *code)

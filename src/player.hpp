@@ -5,6 +5,7 @@ namespace player
 {
     class Player
     {
+
         AVFormatContext *pFormatCtx;
         struct SwsContext *img_convert_ctx;
         struct SwsContext *sws_ctx = NULL;
@@ -23,6 +24,15 @@ namespace player
         int vframe = 0;
 
     public:
+        bool hasVideo = true;
+        bool hasAudio = true;
+
+        int realWidth;
+        int realHeight;
+
+        float widthDiff;
+        float heightDiff;
+
         AVFrame *pRGBFrame = NULL;
         Player(char *buf);
 
