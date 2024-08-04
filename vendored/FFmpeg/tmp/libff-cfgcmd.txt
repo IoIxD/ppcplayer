@@ -1,1 +1,0 @@
-cmd='/home/gavin/Projects/os9player/vendored/FFmpeg/configure;--prefix=/home/gavin/Projects/os9player/lib;--arch=ppc32;--target-os=none;--cross-prefix=powerpc-apple-macos-;--enable-cross-compile;--disable-pthreads;--disable-altivec;--enable-lasx'
