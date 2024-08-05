@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(os9player LANGUAGES C CXX)
+project(ppcplayer LANGUAGES C CXX)
 
 
 
@@ -30,16 +30,16 @@ file(GLOB_RECURSE data resources/*)
 # add the data to the target, so it becomes visible in some IDE
 
 if(CMAKE_SYSTEM_NAME MATCHES Retro)
-    add_application(os9player ${sources} ${data})
+    add_application(ppcplayer ${sources} ${data})
 else()
-    add_executable(os9player ${sources} ${data})
+    add_executable(ppcplayer ${sources} ${data})
 endif()
 
-set_property(TARGET os9player PROPERTY CXX_STANDARD 20)
+set_property(TARGET ppcplayer PROPERTY CXX_STANDARD 20)
 
-set_target_properties(os9player PROPERTIES COMPILE_FLAGS "-ffunction-sections -mcpu=601 -O3 -Wall -Wextra -Wno-unused-parameter")
-set_target_properties(os9player PROPERTIES LINK_FLAGS "-Wl,-gc-sections")
-target_link_libraries( os9player OpenGL)
+set_target_properties(ppcplayer PROPERTIES COMPILE_FLAGS "-ffunction-sections -mcpu=601 -O3 -Wall -Wextra -Wno-unused-parameter")
+set_target_properties(ppcplayer PROPERTIES LINK_FLAGS "-Wl,-gc-sections")
+target_link_libraries( ppcplayer OpenGL)
  
 message(CMAKE_C_COMPILER ": " ${CMAKE_C_COMPILER})
 message(CMAKE_CXX_COMPILER ": " ${CMAKE_CXX_COMPILER})
@@ -58,7 +58,7 @@ if(CMAKE_SYSTEM_NAME MATCHES Retro)
     add_definitions(__RETRO68__)
 
     include_directories(${CMAKE_SOURCE_DIR}/vendored/FFmpeg)
-    target_link_directories(os9player PUBLIC ${CMAKE_SOURCE_DIR}/lib/lib/)
+    target_link_directories(ppcplayer PUBLIC ${CMAKE_SOURCE_DIR}/lib/lib/)
     include(ExternalProject)
     ExternalProject_Add(
         libff
@@ -69,27 +69,27 @@ if(CMAKE_SYSTEM_NAME MATCHES Retro)
         BUILD_IN_SOURCE 1
     )
 
-    add_dependencies(os9player libff)
+    add_dependencies(ppcplayer libff)
 
-    target_link_libraries(os9player avcodec)
-    target_link_libraries(os9player avdevice)
-    target_link_libraries(os9player avfilter)
-    target_link_libraries(os9player avformat)
-    target_link_libraries(os9player avutil)
-    target_link_libraries(os9player m)
-    target_link_libraries(os9player avcodec)
-    target_link_libraries(os9player swresample)
-    target_link_libraries(os9player swscale)
+    target_link_libraries(ppcplayer avcodec)
+    target_link_libraries(ppcplayer avdevice)
+    target_link_libraries(ppcplayer avfilter)
+    target_link_libraries(ppcplayer avformat)
+    target_link_libraries(ppcplayer avutil)
+    target_link_libraries(ppcplayer m)
+    target_link_libraries(ppcplayer avcodec)
+    target_link_libraries(ppcplayer swresample)
+    target_link_libraries(ppcplayer swscale)
 
     include_directories(${CMAKE_SOURCE_DIR}/vendored/include)
     link_directories(${CMAKE_SOURCE_DIR}/vendored/lib)
     
-    target_link_libraries(os9player ${CMAKE_SOURCE_DIR}/vendored/lib/libsdl.a)
-    target_link_libraries(os9player ${CMAKE_SOURCE_DIR}/vendored/lib/libgl.a)
-    target_link_libraries(os9player ${CMAKE_SOURCE_DIR}/vendored/lib/libglmem.a)
-    target_link_libraries(os9player ${CMAKE_SOURCE_DIR}/vendored/lib/libglutil.a)
-    target_link_libraries(os9player ContextualMenu)
-    target_link_libraries(os9player DrawSprocketLib)
+    target_link_libraries(ppcplayer ${CMAKE_SOURCE_DIR}/vendored/lib/libsdl.a)
+    target_link_libraries(ppcplayer ${CMAKE_SOURCE_DIR}/vendored/lib/libgl.a)
+    target_link_libraries(ppcplayer ${CMAKE_SOURCE_DIR}/vendored/lib/libglmem.a)
+    target_link_libraries(ppcplayer ${CMAKE_SOURCE_DIR}/vendored/lib/libglutil.a)
+    target_link_libraries(ppcplayer ContextualMenu)
+    target_link_libraries(ppcplayer DrawSprocketLib)
 else() # Linux: just get it via the package manager.
     find_package(OpenGL REQUIRED)
     find_package(GLUT REQUIRED)
@@ -120,7 +120,7 @@ endif()
 include_directories( "${RETRO68_TOOLCHAIN}universal/CIncludes/")
 message(STATUS "Making for ${CMAKE_SYSTEM_NAME}")
 if(CMAKE_SYSTEM_NAME MATCHES Retro68)
-set_target_properties(os9player PROPERTIES LINK_FLAGS "-Wl,--mac-strip-macsbug")
+set_target_properties(ppcplayer PROPERTIES LINK_FLAGS "-Wl,--mac-strip-macsbug")
 endif()
 
 # this copies all resource files in the build directory
