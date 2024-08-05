@@ -1,2 +1,3 @@
 /vendored linguist-vendored=false
 /vendored/* linguist-vendored=false
+/vendored/** linguist-vendored=false
