@@ -30,35 +30,33 @@ file(GLOB_RECURSE data resources/*)
 # add the data to the target, so it becomes visible in some IDE
 
 if(CMAKE_SYSTEM_NAME MATCHES Retro)
-add_application(os9player ${sources} ${data})
+    add_application(os9player ${sources} ${data})
 else()
-add_executable(os9player ${sources} ${data})
+    add_executable(os9player ${sources} ${data})
 endif()
 
 set_property(TARGET os9player PROPERTY CXX_STANDARD 20)
 
-if(PLATFORM MATCHES retro68)
-add_compile_definitions(FOR_68K)
-endif()
-
-if(PLATFORM MATCHES retroppc)
-add_compile_definitions(FOR_PPC)
 set_target_properties(os9player PROPERTIES COMPILE_FLAGS "-ffunction-sections -mcpu=601 -O3 -Wall -Wextra -Wno-unused-parameter")
 set_target_properties(os9player PROPERTIES LINK_FLAGS "-Wl,-gc-sections")
-target_link_libraries( os9player PowerMgrLib)
-target_link_libraries( os9player NameRegistryLib)
 target_link_libraries( os9player OpenGL)
-endif()
  
 message(CMAKE_C_COMPILER ": " ${CMAKE_C_COMPILER})
 message(CMAKE_CXX_COMPILER ": " ${CMAKE_CXX_COMPILER})
 
-
-
-
-
 # Retro68: compile ffmpeg and link against the OpenGL stub.
 if(CMAKE_SYSTEM_NAME MATCHES Retro)
+
+    file(GLOB_RECURSE sources   
+        platform/apple/**/**/**/*.c platform/apple/**/**/**/*.h platform/apple/**/**/**/*.cpp platform/apple/**/**/**/*.hpp 
+        platform/apple/**/**/*.c platform/apple/**/**/*.h platform/apple/**/**/*.cpp platform/apple/**/**/*.hpp 
+        platform/apple/**/*.c platform/apple/**/*.h platform/apple/**/*.cpp platform/apple/**/*.hpp 
+        platform/apple/*.c platform/apple/*.h platform/apple/*.cpp platform/apple/*.hpp
+        platform/apple/*.r platform/apple/**/*.r platform/apple/**/**/*.r platform/apple/**/**/**/*.r platform/apple/**/**/**/**/*.r
+    )
+    include_directories(${CMAKE_SOURCE_DIR}/platform/apple)
+    add_definitions(__RETRO68__)
+
     include_directories(${CMAKE_SOURCE_DIR}/vendored/FFmpeg)
     target_link_directories(os9player PUBLIC ${CMAKE_SOURCE_DIR}/lib/lib/)
     include(ExternalProject)
@@ -86,20 +84,22 @@ if(CMAKE_SYSTEM_NAME MATCHES Retro)
     include_directories(${CMAKE_SOURCE_DIR}/vendored/include)
     link_directories(${CMAKE_SOURCE_DIR}/vendored/lib)
     
+    target_link_libraries(os9player ${CMAKE_SOURCE_DIR}/vendored/lib/libsdl.a)
     target_link_libraries(os9player ${CMAKE_SOURCE_DIR}/vendored/lib/libgl.a)
     target_link_libraries(os9player ${CMAKE_SOURCE_DIR}/vendored/lib/libglmem.a)
     target_link_libraries(os9player ${CMAKE_SOURCE_DIR}/vendored/lib/libglutil.a)
     target_link_libraries(os9player ContextualMenu)
     target_link_libraries(os9player DrawSprocketLib)
-
 else() # Linux: just get it via the package manager.
     find_package(OpenGL REQUIRED)
     find_package(GLUT REQUIRED)
+    find_package(OpenAL REQUIRED)
+
     include_directories( ${OPENGL_INCLUDE_DIRS}  ${GLUT_INCLUDE_DIRS} )
+    include_directories( ${OPENAL_INCLUDE_DIR}  )
+    link_directories( ${OPENAL_DIRECTORY})
 
-    message("GLUT_LIBRARY: ${GLUT_LIBRARY}")
-
-    target_link_libraries(${PROJECT_NAME} OpenGL::GL GLUT::GLUT m)
+    target_link_libraries(${PROJECT_NAME} OpenGL::GL GLUT::GLUT m OpenAL::OpenAL)
 
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET

@@ -7,8 +7,11 @@
 // #include "console/Console.hpp"
 #include "macros.h"
 
-#include <Timer.h>
-
+#ifdef __RETRO68__
+#include "usleep.h"
+#else
+#include <unistd.h>
+#endif
 static player::Player *pl = NULL;
 
 void display(void);
@@ -24,10 +27,11 @@ auto getTime()
     return std::chrono::system_clock::now();
 }
 
-static QElem what;
 int main(int argc, char **argv)
 {
-    InsTime(&what);
+#ifdef __RETRO68__
+    usleep_setup();
+#endif
     printf("Type a file to open: \n");
     char buf[255];
     scanf("%s", &buf);
@@ -91,8 +95,7 @@ void idle(void)
     auto framerate = pl->framerate();
     pl->step();
     GL_COMMAND(glutPostRedisplay());
-
-    PrimeTime(&what, framerate);
+    usleep(framerate);
 }
 void display_hasVideo(void)
 {

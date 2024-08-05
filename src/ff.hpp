@@ -16,6 +16,9 @@ extern "C"
 #include <string.h>
 #include "GL/gl.h"
 
+    // #include "SDL.h"
+    // #include "SDL_audio.h"
+
 #include "macros.h"
 
     GLint ffmpeg_pix_format_to_gl(int pix_format);

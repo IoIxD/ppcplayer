@@ -1,9 +1,96 @@
 #include "player.hpp"
+
+#define __SDL_ERROR(cmd)                                                \
+    if (cmd < 0)                                                        \
+    {                                                                   \
+        fprintf(stderr, "Error at \"" #cmd "\": %s\n", SDL_GetError()); \
+        getchar();                                                      \
+        getchar();                                                      \
+        exit(-1);                                                       \
+    }
+
+static int audio_buf_index;
+static int audio_buf_size;
+static int audio_write_buf_size;
+
+#define SDL_AUDIO_MIN_BUFFER_SIZE 512
+
+#define __EXEC_N_PRINT(cmd) \
+    printf(#cmd "\n");      \
+    cmd;
+
+static void sdl_audio_callback(void *opaque, uint8_t *stream, int len)
+{
+    /*uint8_t *buf;
+    int audio_size, len1;
+
+    // audio_callback_time = av_gettime_relative();
+
+    printf("while (len > 0) (len is %d)\n", len);
+    while (len > 0)
+    {
+        printf("audio_buf_index >= audio_buf_size\n");
+        if (audio_buf_index >= audio_buf_size)
+        {
+            __EXEC_N_PRINT(audio_size = audio_decode_frame(buf));
+            printf("if(audio_size < 0)\n");
+            if (audio_size < 0)
+            {
+                // is->audio_buf = NULL;
+                // audio_buf_size = SDL_AUDIO_MIN_BUFFER_SIZE / audio_tgt.frame_size * is->audio_tgt.frame_size;
+            }
+            else
+            {
+                printf("else\n");
+                __EXEC_N_PRINT(audio_buf_size = audio_size);
+            }
+            __EXEC_N_PRINT(audio_buf_index = 0);
+        }
+        __EXEC_N_PRINT(len1 = audio_buf_size - audio_buf_index);
+        printf("if(len1 > len)\n");
+        if (len1 > len)
+            __EXEC_N_PRINT(len1 = len);
+        printf("if (buf)\n");
+        if (buf)
+        {
+            __EXEC_N_PRINT(memcpy(stream, (uint8_t *)buf + audio_buf_index, len1));
+        }
+        else
+        {
+            __EXEC_N_PRINT(memset(stream, 0, len1));
+        }
+        __EXEC_N_PRINT(len -= len1);
+        __EXEC_N_PRINT(stream += len1);
+        __EXEC_N_PRINT(audio_buf_index += len1);
+    }*/
+    /*__EXEC_N_PRINT(audio_write_buf_size = audio_buf_size - audio_buf_index);*/
+    /* Let's assume the audio driver that is used by SDL has two periods. */
+    /*if (!isnan(is->audio_clock))
+    {
+        set_clock_at(&is->audclk, is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / is->audio_tgt.bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
+        sync_clock_to_slave(&is->extclk, &is->audclk);
+    }*/
+}
 namespace player
 {
 
     Player::Player(char *buf)
     {
+        // Initialize the sound first
+
+        //__SDL_ERROR(SDL_Init(SDL_INIT_AUDIO));
+
+        // opening an audio device:
+        // audio_spec.freq = 44100;
+        // audio_spec.format = AUDIO_S16SYS;
+        // audio_spec.channels = 1;
+        // audio_spec.samples = 1024;
+        // audio_spec.callback = sdl_audio_callback;
+
+        // SDL_AudioSpec audio_device;
+        //__SDL_ERROR(SDL_OpenAudio(
+        //     &audio_spec, &audio_device));
+
         init_pq();
 
         // Texture texture = {0};
@@ -82,6 +169,8 @@ namespace player
             this->heightDiff = (float)this->realHeight / (float)pRGBFrame->height;
             av_frame_get_buffer(pRGBFrame, 0);
         }
+
+        // SDL_PauseAudio(0);
     }
     void Player::step()
     {
@@ -111,14 +200,9 @@ namespace player
                     {
                         // printf("avcodec_receive_frame\n");
                         ret = avcodec_receive_frame(videoCodecCtx, frame);
-                        if (ret == AVERROR(EAGAIN))
+                        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
                         {
                             break;
-                        }
-                        if (ret == AVERROR_EOF)
-                        {
-                            printf("end\n");
-                            exit(0);
                         }
                         // printf("sws_scale\n");
                         sws_scale(sws_ctx, (uint8_t const *const *)frame->data, frame->linesize, 0,
@@ -150,5 +234,8 @@ namespace player
 
         avformat_close_input(&pFormatCtx);
         pq_free();
+
+        // SDL_CloseAudio();
+        // SDL_Quit();
     }
 }
