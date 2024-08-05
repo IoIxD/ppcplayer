@@ -1,6 +1,6 @@
 # ppcplayer
 
-Work in progress attempt to get ffmpeg on Mac OS 9 and other PowerPC based computers\*. Why? We don't ask those questions.
+Work in progress attempt to get an ffmpeg based video player on Mac OS 9 and other PowerPC based computers\*. Why? We don't ask those questions.
 
 [See the supported codecs](https://github.com/IoIxD/ppcplayer/wiki/Supported-Codecs).
 
