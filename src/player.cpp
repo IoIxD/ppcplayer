@@ -322,17 +322,17 @@ int audio_decode_frame(uint8_t *buf)
 }
 
 #ifdef __RETRO68__
-int callback(void *buffer,
+int callback(void *input,
              void *output,
              unsigned long frames,
              PaTimestamp outTime,
              void *userData)
 #else
-int callback(const void *input, void *buffer, unsigned long frames, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
+int callback(const void *input, void *output, unsigned long frames, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
 #endif
 {
-    // uint8_t *origin = (uint8_t *)buffer;
-    uint8_t *dbuf = (uint8_t *)buffer;
+    // uint8_t *origin = (uint8_t *)output;
+    uint8_t *dbuf = (uint8_t *)output;
     static uint8_t audio_buf[19200];
     static unsigned int audio_buf_size = 0;
     static unsigned int audio_buf_index = 0;
