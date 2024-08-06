@@ -341,7 +341,6 @@ int callback(const void *input, void *buffer, unsigned long frames, const PaStre
     int len = frames * sizeof(float) * 2; // Stereo
     static int jj = 0;
     ++jj;
-    printf("AFrame: %d, %d\n", jj, pq.size);
     while (len > 0)
     {
         if (audio_buf_index >= audio_buf_size)
@@ -495,7 +494,6 @@ namespace player
     void Player::step()
     {
         vframe++;
-        printf("VFrame %d\n", vframe);
         while (av_read_frame(pFormatCtx, packet) >= 0)
         {
             if (packet->stream_index == videoStream->index)

@@ -92,10 +92,10 @@ void UpdateTexture(GLsizei width, GLsizei height, uint8_t *data)
 
 void idle(void)
 {
-    auto framerate = pl->framerate();
+    // auto framerate = pl->framerate();
     pl->step();
     GL_COMMAND(glutPostRedisplay());
-    usleep(framerate);
+    // usleep(framerate);
 }
 
 void display_hasVideo(void)
