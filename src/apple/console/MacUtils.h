@@ -1,3 +1,4 @@
+#ifdef __RETRO68__
 /*
     Copyright 2012 Wolfgang Thaller.
 
@@ -43,3 +44,4 @@ namespace retro
         }
     };
 }
+#endif

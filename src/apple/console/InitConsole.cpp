@@ -1,3 +1,4 @@
+#ifdef __RETRO68__
 /*
     Copyright 2014 Wolfgang Thaller.
 
@@ -117,3 +118,4 @@ extern "C" ssize_t _consoleread(int fd, void *buf, size_t count)
     consoleBuf = consoleBuf.substr(count);
     return count;
 }
+#endif

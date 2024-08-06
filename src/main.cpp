@@ -1,17 +1,22 @@
+extern "C"
+{
+#include "macros.h"
+}
 // #include "SDL.h"
 #include "GL/gl.h"
 #include "GL/glext.h"
 #include "GL/glut.h"
 #include "player.hpp"
-#include <chrono>
 // #include "console/Console.hpp"
-#include "macros.h"
+#include <stdio.h>
+#include "ff2gl.h"
 
 #ifdef __RETRO68__
-#include "usleep.h"
+#include "apple/usleep.h"
 #else
 #include <unistd.h>
 #endif
+
 static player::Player *pl = NULL;
 
 void display(void);
@@ -21,11 +26,6 @@ int window;
 
 GLint format = GL_RGB;
 void InitTexture(GLsizei width, GLsizei height, uint8_t *data);
-
-auto getTime()
-{
-    return std::chrono::system_clock::now();
-}
 
 int main(int argc, char **argv)
 {
@@ -97,9 +97,9 @@ void idle(void)
     GL_COMMAND(glutPostRedisplay());
     usleep(framerate);
 }
+
 void display_hasVideo(void)
 {
-
     GL_COMMAND(glClearColor(1.0f, 0.0f, 1.0f, 1.0f));
     GL_COMMAND(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
     GL_COMMAND(glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL));
@@ -145,33 +145,5 @@ void display(void)
     else
     {
         display_onlyAudio();
-    }
-}
-
-void PauseIfGLError(const char *file, int line_num, const char *code)
-{
-    auto err = glGetError();
-    switch (err)
-    {
-    case GL_NO_ERROR:
-        return;
-    case GL_INVALID_ENUM:
-        __THROW_ERROR(err, "OpenGL Error at %s:%d \"%s\": Invalid Enum\n", file, line_num, code);
-        break;
-    case GL_INVALID_VALUE:
-        __THROW_ERROR(err, "OpenGL Error at %s:%d \"%s\": Invalid Value\n", file, line_num, code);
-        break;
-    case GL_INVALID_OPERATION:
-        __THROW_ERROR(err, "OpenGL Error at %s:%d \"%s\": Invalid Operation\n", file, line_num, code);
-        break;
-    case GL_OUT_OF_MEMORY:
-        __THROW_ERROR(err, "OpenGL Error at %s:%d \"%s\": Out of Memory\n", file, line_num, code);
-        break;
-    case GL_STACK_UNDERFLOW:
-        __THROW_ERROR(err, "OpenGL Error at %s:%d \"%s\": Stack Underflow\n", file, line_num, code);
-        break;
-    case GL_STACK_OVERFLOW:
-        __THROW_ERROR(err, "OpenGL Error at %s:%d \"%s\": Stack Overflow\n", file, line_num, code);
-        break;
     }
 }

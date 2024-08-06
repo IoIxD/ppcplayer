@@ -1,3 +1,4 @@
+#ifdef __RETRO68__
 /*
     Copyright 2012-2020 Wolfgang Thaller, Davide Bucci
 
@@ -32,7 +33,6 @@ namespace retro
     class Attributes
     {
     public:
-
         bool isBold(void) const;
         bool isUnderline(void) const;
         bool isItalic(void) const;
@@ -45,7 +45,6 @@ namespace retro
         void reset(void);
 
     private:
-
         bool cBold;
         bool cUnderline;
         bool cItalic;
@@ -56,7 +55,11 @@ namespace retro
     public:
         char c;
         Attributes attrs;
-        AttributedChar(char cc, Attributes aa) {c=cc; attrs=aa;}
+        AttributedChar(char cc, Attributes aa)
+        {
+            c = cc;
+            attrs = aa;
+        }
     };
 
     enum class State
@@ -93,13 +96,11 @@ namespace retro
 
         virtual void setWindowName(std::string newName) {};
 
-
         void Idle();
 
         bool IsEOF() const { return eof; }
 
     private:
-
         State sequenceState;
         std::string windowName;
         GrafPtr consolePort = nullptr;
@@ -139,10 +140,9 @@ namespace retro
 
     protected:
         void Init(GrafPtr port, Rect r);
-
     };
-
 
 }
 
 #endif /* RETRO68_CONSOLE_H_ */
+#endif

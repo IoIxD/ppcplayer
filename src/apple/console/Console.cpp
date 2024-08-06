@@ -1,3 +1,4 @@
+#ifdef __RETRO68__
 /*
     Copyright 2012-2020 Wolfgang Thaller, Davide Bucci
 
@@ -561,3 +562,4 @@ char Console::WaitNextChar()
 {
     return 0;
 }
+#endif

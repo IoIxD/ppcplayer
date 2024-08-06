@@ -37,15 +37,17 @@ endif()
 
 set_property(TARGET ppcplayer PROPERTY CXX_STANDARD 20)
 
-set_target_properties(ppcplayer PROPERTIES COMPILE_FLAGS "-ffunction-sections -mcpu=601 -O3 -Wall -Wextra -Wno-unused-parameter")
-set_target_properties(ppcplayer PROPERTIES LINK_FLAGS "-Wl,-gc-sections")
-target_link_libraries( ppcplayer OpenGL)
- 
+
 message(CMAKE_C_COMPILER ": " ${CMAKE_C_COMPILER})
 message(CMAKE_CXX_COMPILER ": " ${CMAKE_CXX_COMPILER})
 
+include(ExternalProject)
+
+
 # Retro68: compile ffmpeg and link against the OpenGL stub.
 if(CMAKE_SYSTEM_NAME MATCHES Retro)
+    set_target_properties(ppcplayer PROPERTIES COMPILE_FLAGS "-ffunction-sections -mcpu=601 -O3 -Wall -Wextra -Wno-unused-parameter")
+    set_target_properties(ppcplayer PROPERTIES LINK_FLAGS "-Wl,-gc-sections")
 
     file(GLOB_RECURSE sources   
         platform/apple/**/**/**/*.c platform/apple/**/**/**/*.h platform/apple/**/**/**/*.cpp platform/apple/**/**/**/*.hpp 
@@ -54,12 +56,13 @@ if(CMAKE_SYSTEM_NAME MATCHES Retro)
         platform/apple/*.c platform/apple/*.h platform/apple/*.cpp platform/apple/*.hpp
         platform/apple/*.r platform/apple/**/*.r platform/apple/**/**/*.r platform/apple/**/**/**/*.r platform/apple/**/**/**/**/*.r
     )
+    
     include_directories(${CMAKE_SOURCE_DIR}/platform/apple)
-    add_definitions(__RETRO68__)
+    add_compile_definitions(__RETRO68__)
+    add_compile_definitions(__VENDORED_PORTAUDIO__)
 
     include_directories(${CMAKE_SOURCE_DIR}/vendored/FFmpeg)
     target_link_directories(ppcplayer PUBLIC ${CMAKE_SOURCE_DIR}/lib/lib/)
-    include(ExternalProject)
     ExternalProject_Add(
         libff
         SOURCE_DIR ${CMAKE_SOURCE_DIR}/vendored/FFmpeg
@@ -70,7 +73,9 @@ if(CMAKE_SYSTEM_NAME MATCHES Retro)
     )
 
     add_dependencies(ppcplayer libff)
+    link_directories(${CMAKE_SOURCE_DIR}/vendored/lib)
 
+    target_link_libraries( ppcplayer OpenGL)
     target_link_libraries(ppcplayer avcodec)
     target_link_libraries(ppcplayer avdevice)
     target_link_libraries(ppcplayer avfilter)
@@ -82,25 +87,35 @@ if(CMAKE_SYSTEM_NAME MATCHES Retro)
     target_link_libraries(ppcplayer swscale)
 
     include_directories(${CMAKE_SOURCE_DIR}/vendored/include)
-    link_directories(${CMAKE_SOURCE_DIR}/vendored/lib)
     
-    target_link_libraries(ppcplayer ${CMAKE_SOURCE_DIR}/vendored/lib/libsdl.a)
+    
     target_link_libraries(ppcplayer ${CMAKE_SOURCE_DIR}/vendored/lib/libgl.a)
     target_link_libraries(ppcplayer ${CMAKE_SOURCE_DIR}/vendored/lib/libglmem.a)
     target_link_libraries(ppcplayer ${CMAKE_SOURCE_DIR}/vendored/lib/libglutil.a)
     target_link_libraries(ppcplayer ContextualMenu)
     target_link_libraries(ppcplayer DrawSprocketLib)
+    target_link_libraries(ppcplayer SoundLib)
 else() # Linux: just get it via the package manager.
     find_package(OpenGL REQUIRED)
     find_package(GLUT REQUIRED)
-    find_package(OpenAL REQUIRED)
 
     include_directories( ${OPENGL_INCLUDE_DIRS}  ${GLUT_INCLUDE_DIRS} )
-    include_directories( ${OPENAL_INCLUDE_DIR}  )
-    link_directories( ${OPENAL_DIRECTORY})
+    target_link_libraries(${PROJECT_NAME} PUBLIC OpenGL::GL GLUT::GLUT m)
 
-    target_link_libraries(${PROJECT_NAME} OpenGL::GL GLUT::GLUT m OpenAL::OpenAL)
+    ExternalProject_Add(freealut
+        GIT_REPOSITORY "https://github.com/vancegroup/freealut"
+        INSTALL_COMMAND cmake -E echo "Skipping install step."
+    )
+    ExternalProject_Add(pa
+        PREFIX=${CMAKE_SOURCE_DIR}/lib
+        GIT_REPOSITORY "https://github.com/PortAudio/portaudio"
+        INSTALL_COMMAND cmake -E echo "Skipping install step."
+        EXCLUDE_FROM_ALL
+    )
 
+    add_dependencies(ppcplayer freealut)
+    add_dependencies(ppcplayer pa)
+    target_link_libraries(${PROJECT_NAME} PUBLIC portaudio)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET
         libavdevice
@@ -112,16 +127,16 @@ else() # Linux: just get it via the package manager.
         libavutil
     )
 
-    target_link_libraries(${PROJECT_NAME}
+    target_link_libraries(${PROJECT_NAME} PUBLIC
         PkgConfig::LIBAV
     )
-
 endif()
+
+
+
 include_directories( "${RETRO68_TOOLCHAIN}universal/CIncludes/")
 message(STATUS "Making for ${CMAKE_SYSTEM_NAME}")
-if(CMAKE_SYSTEM_NAME MATCHES Retro68)
-set_target_properties(ppcplayer PROPERTIES LINK_FLAGS "-Wl,--mac-strip-macsbug")
-endif()
+
 
 # this copies all resource files in the build directory
 # we need this, because we want to work with paths relative to the executable

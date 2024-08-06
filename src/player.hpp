@@ -1,10 +1,25 @@
-#include "ff.hpp"
+extern "C"
+{
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/opt.h>
+#include <libswscale/swscale.h>
+#include <libswresample/swresample.h>
+}
+#ifdef __RETRO68__
+#include "portaudio/portaudio.h"
+#else
+#include <portaudio.h>
+#endif
+
 #pragma once
 
 namespace player
 {
     class Player
     {
+        PaError err;
+        PaStream *stream;
 
         AVFormatContext *pFormatCtx;
         struct SwsContext *img_convert_ctx;

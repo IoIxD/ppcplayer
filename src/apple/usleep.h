@@ -3,10 +3,9 @@
  */
 
 #include <unistd.h>
+#include <Timer.h>
 
 static QElem what;
-
-#include <Timer.h>
 
 void usleep_setup()
 {

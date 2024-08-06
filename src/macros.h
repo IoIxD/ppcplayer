@@ -14,4 +14,11 @@ void PauseIfGLError(const char *file, int line_num, const char *code);
     cmd;                \
     PauseIfGLError(__FILE__, __LINE__, #cmd)
 
+#define PA_COMMAND(cmd)                                                                                                    \
+    err = cmd;                                                                                                             \
+    if (err != paNoError)                                                                                                  \
+    {                                                                                                                      \
+        __THROW_FATAL_ERROR(err, "PortAudio error at %s:%d \"%s\": %s\n", __FILE__, __LINE__, #cmd, Pa_GetErrorText(err)); \
+    }
+
 #endif

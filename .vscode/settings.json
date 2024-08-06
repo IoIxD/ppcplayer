@@ -82,6 +82,17 @@
     "streambuf": "cpp",
     "cfenv": "cpp",
     "cinttypes": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "csignal": "cpp",
+    "bitset": "cpp",
+    "stdio.h": "c",
+    "pa_host.h": "c",
+    "portaudio.h": "c",
+    "gestalt.h": "c",
+    "strings.h": "c",
+    "mactypes.h": "c",
+    "string.h": "c",
+    "timer.h": "c",
+    "pa_unix.h": "c"
   }
 }
