@@ -391,9 +391,8 @@ static int enc_stats_init(OutputStream *ost, EncStats *es, int pre,
             return ret;
     }
 
-    ret = pthread_mutex_init(&es->lock, NULL);
-    if (ret)
-        return AVERROR(ret);
+    ret = // pthread_mutex_init(&es->lock, NULL);
+        if (ret) return AVERROR(ret);
     es->lock_initialized = 1;
 
     ret = enc_stats_get_file(&es->io, path);

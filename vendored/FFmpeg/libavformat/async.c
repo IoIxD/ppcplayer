@@ -72,10 +72,10 @@ typedef struct AsyncContext
     int64_t logical_size;
     RingBuffer ring;
 
-    pthread_cond_t cond_wakeup_main;
-    pthread_cond_t cond_wakeup_background;
-    pthread_mutex_t mutex;
-    pthread_t async_buffer_thread;
+    // pthread_cond_t cond_wakeup_main;
+    // pthread_cond_t cond_wakeup_background;
+    // pthread_mutex_t mutex;
+    // pthread_t async_buffer_thread;
 
     int abort_request;
     AVIOInterruptCB interrupt_callback;
@@ -197,13 +197,13 @@ static void *async_buffer_task(void *arg)
     {
         int fifo_space, to_copy;
 
-        pthread_mutex_lock(&c->mutex);
+        // pthread_mutex_lock(&c->mutex);
         if (async_check_interrupt(h))
         {
             c->io_eof_reached = 1;
             c->io_error = AVERROR_EXIT;
-            pthread_cond_signal(&c->cond_wakeup_main);
-            pthread_mutex_unlock(&c->mutex);
+            // pthread_cond_signal(&c->cond_wakeup_main);
+            // pthread_mutex_unlock(&c->mutex);
             break;
         }
 
@@ -221,25 +221,25 @@ static void *async_buffer_task(void *arg)
             c->seek_ret = seek_ret;
             c->seek_request = 0;
 
-            pthread_cond_signal(&c->cond_wakeup_main);
-            pthread_mutex_unlock(&c->mutex);
+            // pthread_cond_signal(&c->cond_wakeup_main);
+            // pthread_mutex_unlock(&c->mutex);
             continue;
         }
 
         fifo_space = ring_space(ring);
         if (c->io_eof_reached || fifo_space <= 0)
         {
-            pthread_cond_signal(&c->cond_wakeup_main);
-            pthread_cond_wait(&c->cond_wakeup_background, &c->mutex);
-            pthread_mutex_unlock(&c->mutex);
+            // pthread_cond_signal(&c->cond_wakeup_main);
+            // pthread_cond_wait(&c->cond_wakeup_background, &c->mutex);
+            // pthread_mutex_unlock(&c->mutex);
             continue;
         }
-        pthread_mutex_unlock(&c->mutex);
+        // pthread_mutex_unlock(&c->mutex);
 
         to_copy = FFMIN(4096, fifo_space);
         ret = ring_write(ring, h, to_copy);
 
-        pthread_mutex_lock(&c->mutex);
+        // pthread_mutex_lock(&c->mutex);
         if (ret <= 0)
         {
             c->io_eof_reached = 1;
@@ -247,8 +247,8 @@ static void *async_buffer_task(void *arg)
                 c->io_error = c->inner_io_error;
         }
 
-        pthread_cond_signal(&c->cond_wakeup_main);
-        pthread_mutex_unlock(&c->mutex);
+        // pthread_cond_signal(&c->cond_wakeup_main);
+        // pthread_mutex_unlock(&c->mutex);
     }
 
     return NULL;
@@ -278,46 +278,46 @@ static int async_open(URLContext *h, const char *arg, int flags, AVDictionary **
     c->logical_size = ffurl_size(c->inner);
     h->is_streamed = c->inner->is_streamed;
 
-    ret = pthread_mutex_init(&c->mutex, NULL);
-    if (ret != 0)
+    ret = // pthread_mutex_init(&c->mutex, NULL);
+        if (ret != 0)
     {
         ret = AVERROR(ret);
-        av_log(h, AV_LOG_ERROR, "pthread_mutex_init failed : %s\n", av_err2str(ret));
+        av_log(h, AV_LOG_ERROR, "// pthread_mutex_init failed : %s\n", av_err2str(ret));
         goto mutex_fail;
     }
 
-    ret = pthread_cond_init(&c->cond_wakeup_main, NULL);
-    if (ret != 0)
+    ret = // pthread_cond_init(&c->cond_wakeup_main, NULL);
+        if (ret != 0)
     {
         ret = AVERROR(ret);
-        av_log(h, AV_LOG_ERROR, "pthread_cond_init failed : %s\n", av_err2str(ret));
+        av_log(h, AV_LOG_ERROR, "// pthread_cond_init failed : %s\n", av_err2str(ret));
         goto cond_wakeup_main_fail;
     }
 
-    ret = pthread_cond_init(&c->cond_wakeup_background, NULL);
-    if (ret != 0)
+    ret = // pthread_cond_init(&c->cond_wakeup_background, NULL);
+        if (ret != 0)
     {
         ret = AVERROR(ret);
-        av_log(h, AV_LOG_ERROR, "pthread_cond_init failed : %s\n", av_err2str(ret));
+        av_log(h, AV_LOG_ERROR, "// pthread_cond_init failed : %s\n", av_err2str(ret));
         goto cond_wakeup_background_fail;
     }
 
-    ret = pthread_create(&c->async_buffer_thread, NULL, async_buffer_task, h);
-    if (ret)
+    ret = // pthread_create(&c->async_buffer_thread, NULL, async_buffer_task, h);
+        if (ret)
     {
         ret = AVERROR(ret);
-        av_log(h, AV_LOG_ERROR, "pthread_create failed : %s\n", av_err2str(ret));
+        av_log(h, AV_LOG_ERROR, "// pthread_create failed : %s\n", av_err2str(ret));
         goto thread_fail;
     }
 
     return 0;
 
 thread_fail:
-    pthread_cond_destroy(&c->cond_wakeup_background);
+    // pthread_cond_destroy(&c->cond_wakeup_background);
 cond_wakeup_background_fail:
-    pthread_cond_destroy(&c->cond_wakeup_main);
+    // pthread_cond_destroy(&c->cond_wakeup_main);
 cond_wakeup_main_fail:
-    pthread_mutex_destroy(&c->mutex);
+    // pthread_mutex_destroy(&c->mutex);
 mutex_fail:
     ffurl_closep(&c->inner);
 url_fail:
@@ -331,18 +331,18 @@ static int async_close(URLContext *h)
     AsyncContext *c = h->priv_data;
     int ret;
 
-    pthread_mutex_lock(&c->mutex);
+    // pthread_mutex_lock(&c->mutex);
     c->abort_request = 1;
-    pthread_cond_signal(&c->cond_wakeup_background);
-    pthread_mutex_unlock(&c->mutex);
+    // pthread_cond_signal(&c->cond_wakeup_background);
+    // pthread_mutex_unlock(&c->mutex);
 
-    ret = pthread_join(c->async_buffer_thread, NULL);
-    if (ret != 0)
-        av_log(h, AV_LOG_ERROR, "pthread_join(): %s\n", av_err2str(ret));
+    ret = // pthread_join(c->async_buffer_thread, NULL);
+        if (ret != 0)
+            av_log(h, AV_LOG_ERROR, "// pthread_join(): %s\n", av_err2str(ret));
 
-    pthread_cond_destroy(&c->cond_wakeup_background);
-    pthread_cond_destroy(&c->cond_wakeup_main);
-    pthread_mutex_destroy(&c->mutex);
+    // pthread_cond_destroy(&c->cond_wakeup_background);
+    // pthread_cond_destroy(&c->cond_wakeup_main);
+    // pthread_mutex_destroy(&c->mutex);
     ffurl_closep(&c->inner);
     ring_destroy(&c->ring);
 
@@ -357,7 +357,7 @@ static int async_read_internal(URLContext *h, void *dest, int size)
     int to_read = size;
     int ret = 0;
 
-    pthread_mutex_lock(&c->mutex);
+    // pthread_mutex_lock(&c->mutex);
 
     while (to_read > 0)
     {
@@ -392,12 +392,12 @@ static int async_read_internal(URLContext *h, void *dest, int size)
             }
             break;
         }
-        pthread_cond_signal(&c->cond_wakeup_background);
-        pthread_cond_wait(&c->cond_wakeup_main, &c->mutex);
+        // pthread_cond_signal(&c->cond_wakeup_background);
+        // pthread_cond_wait(&c->cond_wakeup_main, &c->mutex);
     }
 
-    pthread_cond_signal(&c->cond_wakeup_background);
-    pthread_mutex_unlock(&c->mutex);
+    // pthread_cond_signal(&c->cond_wakeup_background);
+    // pthread_mutex_unlock(&c->mutex);
 
     return ret;
 }
@@ -479,7 +479,7 @@ static int64_t async_seek(URLContext *h, int64_t pos, int whence)
         return AVERROR(EINVAL);
     }
 
-    pthread_mutex_lock(&c->mutex);
+    // pthread_mutex_lock(&c->mutex);
 
     c->seek_request = 1;
     c->seek_pos = new_logical_pos;
@@ -501,11 +501,11 @@ static int64_t async_seek(URLContext *h, int64_t pos, int whence)
             ret = c->seek_ret;
             break;
         }
-        pthread_cond_signal(&c->cond_wakeup_background);
-        pthread_cond_wait(&c->cond_wakeup_main, &c->mutex);
+        // pthread_cond_signal(&c->cond_wakeup_background);
+        // pthread_cond_wait(&c->cond_wakeup_main, &c->mutex);
     }
 
-    pthread_mutex_unlock(&c->mutex);
+    // pthread_mutex_unlock(&c->mutex);
 
     return ret;
 }

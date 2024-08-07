@@ -29,22 +29,25 @@
 #include "libavutil/threadmessage.h"
 #include "libavutil/thread.h" // not public
 
-struct sender_data {
+struct sender_data
+{
     int id;
-    pthread_t tid;
+    // pthread_t tid;
     int workload;
     AVThreadMessageQueue *queue;
 };
 
 /* same as sender_data but shuffled for testing purpose */
-struct receiver_data {
-    pthread_t tid;
+struct receiver_data
+{
+    // pthread_t tid;
     int workload;
     int id;
     AVThreadMessageQueue *queue;
 };
 
-struct message {
+struct message
+{
     AVFrame *frame;
     // we add some junk in the message to make sure the message size is >
     // sizeof(void*)
@@ -66,11 +69,15 @@ static void *sender_thread(void *arg)
     struct sender_data *wd = arg;
 
     av_log(NULL, AV_LOG_INFO, "sender #%d: workload=%d\n", wd->id, wd->workload);
-    for (i = 0; i < wd->workload; i++) {
-        if (rand() % wd->workload < wd->workload / 10) {
+    for (i = 0; i < wd->workload; i++)
+    {
+        if (rand() % wd->workload < wd->workload / 10)
+        {
             av_log(NULL, AV_LOG_INFO, "sender #%d: flushing the queue\n", wd->id);
             av_thread_message_flush(wd->queue);
-        } else {
+        }
+        else
+        {
             char *val;
             AVDictionary *meta = NULL;
             struct message msg = {
@@ -78,7 +85,8 @@ static void *sender_thread(void *arg)
                 .frame = av_frame_alloc(),
             };
 
-            if (!msg.frame) {
+            if (!msg.frame)
+            {
                 ret = AVERROR(ENOMEM);
                 break;
             }
@@ -86,13 +94,15 @@ static void *sender_thread(void *arg)
             /* we add some metadata to identify the frames */
             val = av_asprintf("frame %d/%d from sender %d",
                               i + 1, wd->workload, wd->id);
-            if (!val) {
+            if (!val)
+            {
                 av_frame_free(&msg.frame);
                 ret = AVERROR(ENOMEM);
                 break;
             }
             ret = av_dict_set(&meta, "sig", val, AV_DICT_DONT_STRDUP_VAL);
-            if (ret < 0) {
+            if (ret < 0)
+            {
                 av_frame_free(&msg.frame);
                 break;
             }
@@ -100,10 +110,11 @@ static void *sender_thread(void *arg)
 
             /* allocate a real frame in order to simulate "real" work */
             msg.frame->format = AV_PIX_FMT_RGBA;
-            msg.frame->width  = 320;
+            msg.frame->width = 320;
             msg.frame->height = 240;
             ret = av_frame_get_buffer(msg.frame, 0);
-            if (ret < 0) {
+            if (ret < 0)
+            {
                 av_frame_free(&msg.frame);
                 break;
             }
@@ -112,7 +123,8 @@ static void *sender_thread(void *arg)
             av_log(NULL, AV_LOG_INFO, "sender #%d: sending my work (%d/%d frame:%p)\n",
                    wd->id, i + 1, wd->workload, msg.frame);
             ret = av_thread_message_queue_send(wd->queue, &msg, 0);
-            if (ret < 0) {
+            if (ret < 0)
+            {
                 av_frame_free(&msg.frame);
                 break;
             }
@@ -129,13 +141,18 @@ static void *receiver_thread(void *arg)
     int i, ret = 0;
     struct receiver_data *rd = arg;
 
-    for (i = 0; i < rd->workload; i++) {
-        if (rand() % rd->workload < rd->workload / 10) {
+    for (i = 0; i < rd->workload; i++)
+    {
+        if (rand() % rd->workload < rd->workload / 10)
+        {
             av_log(NULL, AV_LOG_INFO, "receiver #%d: flushing the queue, "
-                   "discarding %d message(s)\n", rd->id,
+                                      "discarding %d message(s)\n",
+                   rd->id,
                    av_thread_message_queue_nb_elems(rd->queue));
             av_thread_message_flush(rd->queue);
-        } else {
+        }
+        else
+        {
             struct message msg;
             AVDictionary *meta;
             AVDictionaryEntry *e;
@@ -172,36 +189,41 @@ int main(int ac, char **av)
     struct receiver_data *receivers;
     AVThreadMessageQueue *queue = NULL;
 
-    if (ac != 8) {
+    if (ac != 8)
+    {
         av_log(NULL, AV_LOG_ERROR, "%s <max_queue_size> "
-               "<nb_senders> <sender_min_send> <sender_max_send> "
-               "<nb_receivers> <receiver_min_recv> <receiver_max_recv>\n", av[0]);
+                                   "<nb_senders> <sender_min_send> <sender_max_send> "
+                                   "<nb_receivers> <receiver_min_recv> <receiver_max_recv>\n",
+               av[0]);
         return 1;
     }
 
-    max_queue_size    = atoi(av[1]);
-    nb_senders        = atoi(av[2]);
-    sender_min_load   = atoi(av[3]);
-    sender_max_load   = atoi(av[4]);
-    nb_receivers      = atoi(av[5]);
+    max_queue_size = atoi(av[1]);
+    nb_senders = atoi(av[2]);
+    sender_min_load = atoi(av[3]);
+    sender_max_load = atoi(av[4]);
+    nb_receivers = atoi(av[5]);
     receiver_min_load = atoi(av[6]);
     receiver_max_load = atoi(av[7]);
 
     if (max_queue_size <= 0 ||
         nb_senders <= 0 || sender_min_load <= 0 || sender_max_load <= 0 ||
-        nb_receivers <= 0 || receiver_min_load <= 0 || receiver_max_load <= 0) {
+        nb_receivers <= 0 || receiver_min_load <= 0 || receiver_max_load <= 0)
+    {
         av_log(NULL, AV_LOG_ERROR, "negative values not allowed\n");
         return 1;
     }
 
     av_log(NULL, AV_LOG_INFO, "qsize:%d / %d senders sending [%d-%d] / "
-           "%d receivers receiving [%d-%d]\n", max_queue_size,
+                              "%d receivers receiving [%d-%d]\n",
+           max_queue_size,
            nb_senders, sender_min_load, sender_max_load,
            nb_receivers, receiver_min_load, receiver_max_load);
 
-    senders   = av_calloc(nb_senders,   sizeof(*senders));
+    senders = av_calloc(nb_senders, sizeof(*senders));
     receivers = av_calloc(nb_receivers, sizeof(*receivers));
-    if (!senders || !receivers) {
+    if (!senders || !receivers)
+    {
         ret = AVERROR(ENOMEM);
         goto end;
     }
@@ -212,15 +234,18 @@ int main(int ac, char **av)
 
     av_thread_message_queue_set_free_func(queue, free_frame);
 
-#define SPAWN_THREADS(type) do {                                                \
-    for (i = 0; i < nb_##type##s; i++) {                                        \
-        struct type##_data *td = &type##s[i];                                   \
-                                                                                \
-        td->id = i;                                                             \
-        td->queue = queue;                                                      \
-        td->workload = get_workload(type##_min_load, type##_max_load);          \
-                                                                                \
-        ret = pthread_create(&td->tid, NULL, type##_thread, td);                \
+#define SPAWN_THREADS(type)                                                \
+    do                                                                     \
+    {                                                                      \
+        for (i = 0; i < nb_##type##s; i++)                                 \
+        {                                                                  \
+            struct type##_data *td = &type##s[i];                          \
+                                                                           \
+            td->id = i;                                                    \
+            td->queue = queue;                                             \
+            td->workload = get_workload(type##_min_load, type##_max_load); \
+                                                                           \
+            ret = // pthread_create(&td->tid, NULL, type##_thread, td);                \
         if (ret) {                                                              \
             const int err = AVERROR(ret);                                       \
             av_log(NULL, AV_LOG_ERROR, "Unable to start " AV_STRINGIFY(type)    \
@@ -230,11 +255,14 @@ int main(int ac, char **av)
     }                                                                           \
 } while (0)
 
-#define WAIT_THREADS(type) do {                                                 \
-    for (i = 0; i < nb_##type##s; i++) {                                        \
-        struct type##_data *td = &type##s[i];                                   \
-                                                                                \
-        ret = pthread_join(td->tid, NULL);                                      \
+#define WAIT_THREADS(type)                        \
+    do                                            \
+    {                                             \
+        for (i = 0; i < nb_##type##s; i++)        \
+        {                                         \
+            struct type##_data *td = &type##s[i]; \
+                                                  \
+            ret = // pthread_join(td->tid, NULL);                                      \
         if (ret) {                                                              \
             const int err = AVERROR(ret);                                       \
             av_log(NULL, AV_LOG_ERROR, "Unable to join " AV_STRINGIFY(type)     \
@@ -255,7 +283,8 @@ end:
     av_freep(&senders);
     av_freep(&receivers);
 
-    if (ret < 0 && ret != AVERROR_EOF) {
+    if (ret < 0 && ret != AVERROR_EOF)
+    {
         av_log(NULL, AV_LOG_ERROR, "Error: %s\n", av_err2str(ret));
         return 1;
     }

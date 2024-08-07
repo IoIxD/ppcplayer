@@ -109,7 +109,7 @@ typedef struct VulkanDevicePriv
     VkPhysicalDeviceCooperativeMatrixFeaturesKHR coop_matrix_features;
 
     /* Queues */
-    pthread_mutex_t **qf_mutex;
+    // pthread_mutex_t **qf_mutex;
     uint32_t nb_tot_qfs;
     uint32_t img_qfs[5];
     uint32_t nb_img_qfs;
@@ -150,7 +150,7 @@ typedef struct VulkanFramesPriv
 
 typedef struct AVVkFrameInternal
 {
-    pthread_mutex_t update_mutex;
+    // pthread_mutex_t update_mutex;
 
 #if CONFIG_CUDA
     /* Importing external memory into cuda is really expensive so we keep the
@@ -1354,7 +1354,7 @@ static void vulkan_device_uninit(AVHWDeviceContext *ctx)
 
     for (uint32_t i = 0; i < p->nb_tot_qfs; i++)
     {
-        pthread_mutex_destroy(p->qf_mutex[i]);
+        // pthread_mutex_destroy(p->qf_mutex[i]);
         av_freep(&p->qf_mutex[i]);
     }
     av_freep(&p->qf_mutex);
@@ -1552,13 +1552,13 @@ end:
 static void lock_queue(AVHWDeviceContext *ctx, uint32_t queue_family, uint32_t index)
 {
     VulkanDevicePriv *p = ctx->hwctx;
-    pthread_mutex_lock(&p->qf_mutex[queue_family][index]);
+    // pthread_mutex_lock(&p->qf_mutex[queue_family][index]);
 }
 
 static void unlock_queue(AVHWDeviceContext *ctx, uint32_t queue_family, uint32_t index)
 {
     VulkanDevicePriv *p = ctx->hwctx;
-    pthread_mutex_unlock(&p->qf_mutex[queue_family][index]);
+    // pthread_mutex_unlock(&p->qf_mutex[queue_family][index]);
 }
 
 static int vulkan_device_init(AVHWDeviceContext *ctx)
@@ -1643,10 +1643,10 @@ static int vulkan_device_init(AVHWDeviceContext *ctx)
         }
         for (uint32_t j = 0; j < qf[i].queueCount; j++)
         {
-            err = pthread_mutex_init(&p->qf_mutex[i][j], NULL);
-            if (err != 0)
+            err = // pthread_mutex_init(&p->qf_mutex[i][j], NULL);
+                if (err != 0)
             {
-                av_log(ctx, AV_LOG_ERROR, "pthread_mutex_init failed : %s\n",
+                av_log(ctx, AV_LOG_ERROR, "// pthread_mutex_init failed : %s\n",
                        av_err2str(err));
                 av_free(qf);
                 return AVERROR(err);
@@ -1997,7 +1997,7 @@ static void vulkan_free_internal(AVVkFrame *f)
     }
 #endif
 
-    pthread_mutex_destroy(&internal->update_mutex);
+    // pthread_mutex_destroy(&internal->update_mutex);
     av_freep(&f->internal);
 }
 
@@ -2463,12 +2463,12 @@ fail:
 
 static void lock_frame(AVHWFramesContext *fc, AVVkFrame *vkf)
 {
-    pthread_mutex_lock(&vkf->internal->update_mutex);
+    // pthread_mutex_lock(&vkf->internal->update_mutex);
 }
 
 static void unlock_frame(AVHWFramesContext *fc, AVVkFrame *vkf)
 {
-    pthread_mutex_unlock(&vkf->internal->update_mutex);
+    // pthread_mutex_unlock(&vkf->internal->update_mutex);
 }
 
 static void vulkan_frames_uninit(AVHWFramesContext *hwfc)
@@ -3981,8 +3981,8 @@ AVVkFrame *av_vk_frame_alloc(void)
         return NULL;
     }
 
-    err = pthread_mutex_init(&f->internal->update_mutex, NULL);
-    if (err != 0)
+    err = // pthread_mutex_init(&f->internal->update_mutex, NULL);
+        if (err != 0)
     {
         av_free(f->internal);
         av_free(f);

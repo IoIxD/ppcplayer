@@ -1245,7 +1245,7 @@ OBJS-$(CONFIG_TRUEHD_CORE_BSF)            += mlp_parse.o mlp.o
 
 # thread libraries
 OBJS-$(HAVE_LIBC_MSVCRT)               += file_open.o
-OBJS-$(HAVE_THREADS)                   += pthread.o pthread_slice.o pthread_frame.o
+OBJS-$(HAVE_THREADS)                   += pthread.o // pthread_slice.o // pthread_frame.o
 
 OBJS-$(CONFIG_FRAME_THREAD_ENCODER)    += frame_thread_encoder.o
 

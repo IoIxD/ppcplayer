@@ -29,26 +29,31 @@
 
 #if !HAVE_THREADS
 
-#define ExecutorThread  char
+#define ExecutorThread char
 
-#define executor_thread_create(t, a, s, ar)      0
-#define executor_thread_join(t, r)               do {} while(0)
+#define executor_thread_create(t, a, s, ar) 0
+#define executor_thread_join(t, r) \
+    do                             \
+    {                              \
+    } while (0)
 
 #else
 
-#define ExecutorThread  pthread_t
+#define ExecutorThread // pthread_t
 
-#define executor_thread_create(t, a, s, ar)      pthread_create(t, a, s, ar)
-#define executor_thread_join(t, r)               pthread_join(t, r)
+#define executor_thread_create(t, a, s, ar) // pthread_create(t, a, s, ar)
+#define executor_thread_join(t, r)          // pthread_join(t, r)
 
-#endif //!HAVE_THREADS
+#endif //! HAVE_THREADS
 
-typedef struct ThreadInfo {
+typedef struct ThreadInfo
+{
     AVExecutor *e;
     ExecutorThread thread;
 } ThreadInfo;
 
-struct AVExecutor {
+struct AVExecutor
+{
     AVTaskCallbacks cb;
     int thread_count;
     bool recursive;
@@ -63,9 +68,9 @@ struct AVExecutor {
     AVTask *tasks;
 };
 
-static AVTask* remove_task(AVTask **prev, AVTask *t)
+static AVTask *remove_task(AVTask **prev, AVTask *t)
 {
-    *prev  = t->next;
+    *prev = t->next;
     t->next = NULL;
     return t;
 }
@@ -73,7 +78,7 @@ static AVTask* remove_task(AVTask **prev, AVTask *t)
 static void add_task(AVTask **prev, AVTask *t)
 {
     t->next = *prev;
-    *prev   = t;
+    *prev = t;
 }
 
 static int run_one_task(AVExecutor *e, void *lc)
@@ -83,7 +88,8 @@ static int run_one_task(AVExecutor *e, void *lc)
 
     for (prev = &e->tasks; *prev && !cb->ready(*prev, cb->user_data); prev = &(*prev)->next)
         /* nothing */;
-    if (*prev) {
+    if (*prev)
+    {
         AVTask *t = remove_task(prev, *prev);
         if (e->thread_count > 0)
             ff_mutex_unlock(&e->lock);
@@ -98,16 +104,19 @@ static int run_one_task(AVExecutor *e, void *lc)
 #if HAVE_THREADS
 static void *executor_worker_task(void *data)
 {
-    ThreadInfo *ti = (ThreadInfo*)data;
-    AVExecutor *e  = ti->e;
-    void *lc       = e->local_contexts + (ti - e->threads) * e->cb.local_context_size;
+    ThreadInfo *ti = (ThreadInfo *)data;
+    AVExecutor *e = ti->e;
+    void *lc = e->local_contexts + (ti - e->threads) * e->cb.local_context_size;
 
     ff_mutex_lock(&e->lock);
-    while (1) {
-        if (e->die) break;
+    while (1)
+    {
+        if (e->die)
+            break;
 
-        if (!run_one_task(e, lc)) {
-            //no task in one loop
+        if (!run_one_task(e, lc))
+        {
+            // no task in one loop
             ff_cond_wait(&e->cond, &e->lock);
         }
     }
@@ -118,8 +127,9 @@ static void *executor_worker_task(void *data)
 
 static void executor_free(AVExecutor *e, const int has_lock, const int has_cond)
 {
-    if (e->thread_count) {
-        //signal die
+    if (e->thread_count)
+    {
+        // signal die
         ff_mutex_lock(&e->lock);
         e->die = 1;
         ff_cond_broadcast(&e->cond);
@@ -139,7 +149,7 @@ static void executor_free(AVExecutor *e, const int has_lock, const int has_cond)
     av_free(e);
 }
 
-AVExecutor* av_executor_alloc(const AVTaskCallbacks *cb, int thread_count)
+AVExecutor *av_executor_alloc(const AVTaskCallbacks *cb, int thread_count)
 {
     AVExecutor *e;
     int has_lock = 0, has_cond = 0;
@@ -168,7 +178,8 @@ AVExecutor* av_executor_alloc(const AVTaskCallbacks *cb, int thread_count)
     if (!has_lock || !has_cond)
         goto free_executor;
 
-    for (/* nothing */; e->thread_count < thread_count; e->thread_count++) {
+    for (/* nothing */; e->thread_count < thread_count; e->thread_count++)
+    {
         ThreadInfo *ti = e->threads + e->thread_count;
         ti->e = e;
         if (executor_thread_create(&ti->thread, NULL, executor_worker_task, ti))
@@ -199,17 +210,20 @@ void av_executor_execute(AVExecutor *e, AVTask *t)
 
     if (e->thread_count)
         ff_mutex_lock(&e->lock);
-    if (t) {
+    if (t)
+    {
         for (prev = &e->tasks; *prev && cb->priority_higher(*prev, t); prev = &(*prev)->next)
             /* nothing */;
         add_task(prev, t);
     }
-    if (e->thread_count) {
+    if (e->thread_count)
+    {
         ff_cond_signal(&e->cond);
         ff_mutex_unlock(&e->lock);
     }
 
-    if (!e->thread_count || !HAVE_THREADS) {
+    if (!e->thread_count || !HAVE_THREADS)
+    {
         if (e->recursive)
             return;
         e->recursive = true;

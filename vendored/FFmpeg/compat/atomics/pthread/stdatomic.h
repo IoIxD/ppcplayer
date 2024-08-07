@@ -21,8 +21,8 @@
  * Copyright (C) 2010 Rémi Denis-Courmont
  */
 
-#ifndef COMPAT_ATOMICS_PTHREAD_STDATOMIC_H
-#define COMPAT_ATOMICS_PTHREAD_STDATOMIC_H
+#ifndef COMPAT_ATOMICS_ // pthread_STDATOMIC_H
+#define COMPAT_ATOMICS_ // pthread_STDATOMIC_H
 
 #include <stdint.h>
 
@@ -31,9 +31,10 @@
 #define ATOMIC_VAR_INIT(value) (value)
 
 #define atomic_init(obj, value) \
-do {                            \
-    *(obj) = (value);           \
-} while(0)
+    do                          \
+    {                           \
+        *(obj) = (value);       \
+    } while (0)
 
 #define kill_dependency(y) ((void)0)
 
@@ -114,7 +115,7 @@ static inline intptr_t atomic_exchange(intptr_t *object, intptr_t desired)
 {
     intptr_t ret;
     avpriv_atomic_lock();
-    ret     = *object;
+    ret = *object;
     *object = desired;
     avpriv_atomic_unlock();
     return ret;
@@ -128,10 +129,13 @@ static inline int atomic_compare_exchange_strong(intptr_t *object, intptr_t *exp
 {
     int ret;
     avpriv_atomic_lock();
-    if (*object == *expected) {
-        ret     = 1;
+    if (*object == *expected)
+    {
+        ret = 1;
         *object = desired;
-    } else {
+    }
+    else
+    {
         ret = 0;
         *expected = *object;
     }
@@ -148,20 +152,20 @@ static inline int atomic_compare_exchange_strong(intptr_t *object, intptr_t *exp
 #define atomic_compare_exchange_weak_explicit(object, expected, desired, success, failure) \
     atomic_compare_exchange_weak(object, expected, desired)
 
-#define FETCH_MODIFY(opname, op)                                                   \
-static inline intptr_t atomic_fetch_ ## opname(intptr_t *object, intptr_t operand) \
-{                                                                                  \
-    intptr_t ret;                                                                  \
-    avpriv_atomic_lock();                                                          \
-    ret = *object;                                                                 \
-    *object = *object op operand;                                                  \
-    avpriv_atomic_unlock();                                                        \
-    return ret;                                                                    \
-}
+#define FETCH_MODIFY(opname, op)                                                     \
+    static inline intptr_t atomic_fetch_##opname(intptr_t *object, intptr_t operand) \
+    {                                                                                \
+        intptr_t ret;                                                                \
+        avpriv_atomic_lock();                                                        \
+        ret = *object;                                                               \
+        *object = *object op operand;                                                \
+        avpriv_atomic_unlock();                                                      \
+        return ret;                                                                  \
+    }
 
 FETCH_MODIFY(add, +)
 FETCH_MODIFY(sub, -)
-FETCH_MODIFY(or,  |)
+FETCH_MODIFY(or, |)
 FETCH_MODIFY(xor, ^)
 FETCH_MODIFY(and, &)
 
@@ -194,4 +198,4 @@ FETCH_MODIFY(and, &)
 #define atomic_flag_clear_explicit(object, order) \
     atomic_flag_clear(object)
 
-#endif /* COMPAT_ATOMICS_PTHREAD_STDATOMIC_H */
+#endif /* COMPAT_ATOMICS_// pthread_STDATOMIC_H */

@@ -443,8 +443,8 @@ int ff_decklink_set_format(AVFormatContext *avctx, decklink_direction_t directio
 void ff_decklink_packet_queue_init(AVFormatContext *avctx, DecklinkPacketQueue *q, int64_t queue_size)
 {
     memset(q, 0, sizeof(DecklinkPacketQueue));
-    pthread_mutex_init(&q->mutex, NULL);
-    pthread_cond_init(&q->cond, NULL);
+    // pthread_mutex_init(&q->mutex, NULL);
+    // pthread_cond_init(&q->cond, NULL);
     q->avctx = avctx;
     q->max_q_size = queue_size;
 }
@@ -453,29 +453,29 @@ void ff_decklink_packet_queue_flush(DecklinkPacketQueue *q)
 {
     AVPacket pkt;
 
-    pthread_mutex_lock(&q->mutex);
+    // pthread_mutex_lock(&q->mutex);
     while (avpriv_packet_list_get(&q->pkt_list, &pkt) == 0)
     {
         av_packet_unref(&pkt);
     }
     q->nb_packets = 0;
     q->size = 0;
-    pthread_mutex_unlock(&q->mutex);
+    // pthread_mutex_unlock(&q->mutex);
 }
 
 void ff_decklink_packet_queue_end(DecklinkPacketQueue *q)
 {
     ff_decklink_packet_queue_flush(q);
-    pthread_mutex_destroy(&q->mutex);
-    pthread_cond_destroy(&q->cond);
+    // pthread_mutex_destroy(&q->mutex);
+    // pthread_cond_destroy(&q->cond);
 }
 
 unsigned long long ff_decklink_packet_queue_size(DecklinkPacketQueue *q)
 {
     unsigned long long size;
-    pthread_mutex_lock(&q->mutex);
+    // pthread_mutex_lock(&q->mutex);
     size = q->size;
-    pthread_mutex_unlock(&q->mutex);
+    // pthread_mutex_unlock(&q->mutex);
     return size;
 }
 
@@ -498,21 +498,21 @@ int ff_decklink_packet_queue_put(DecklinkPacketQueue *q, AVPacket *pkt)
         return -1;
     }
 
-    pthread_mutex_lock(&q->mutex);
+    // pthread_mutex_lock(&q->mutex);
 
     ret = avpriv_packet_list_put(&q->pkt_list, pkt, NULL, 0);
     if (ret == 0)
     {
         q->nb_packets++;
         q->size += pkt_size + sizeof(AVPacket);
-        pthread_cond_signal(&q->cond);
+        // pthread_cond_signal(&q->cond);
     }
     else
     {
         av_packet_unref(pkt);
     }
 
-    pthread_mutex_unlock(&q->mutex);
+    // pthread_mutex_unlock(&q->mutex);
     return ret;
 }
 
@@ -520,7 +520,7 @@ int ff_decklink_packet_queue_get(DecklinkPacketQueue *q, AVPacket *pkt, int bloc
 {
     int ret;
 
-    pthread_mutex_lock(&q->mutex);
+    // pthread_mutex_lock(&q->mutex);
 
     for (;;)
     {
@@ -539,10 +539,10 @@ int ff_decklink_packet_queue_get(DecklinkPacketQueue *q, AVPacket *pkt, int bloc
         }
         else
         {
-            pthread_cond_wait(&q->cond, &q->mutex);
+            // pthread_cond_wait(&q->cond, &q->mutex);
         }
     }
-    pthread_mutex_unlock(&q->mutex);
+    // pthread_mutex_unlock(&q->mutex);
     return ret;
 }
 
@@ -551,13 +551,13 @@ int64_t ff_decklink_packet_queue_peekpts(DecklinkPacketQueue *q)
     PacketListEntry *pkt1;
     int64_t pts = -1;
 
-    pthread_mutex_lock(&q->mutex);
+    // pthread_mutex_lock(&q->mutex);
     pkt1 = q->pkt_list.head;
     if (pkt1)
     {
         pts = pkt1->pkt.pts;
     }
-    pthread_mutex_unlock(&q->mutex);
+    // pthread_mutex_unlock(&q->mutex);
 
     return pts;
 }

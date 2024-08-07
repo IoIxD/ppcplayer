@@ -88,7 +88,7 @@ typedef struct
 
     int             frames_captured;
     int             audio_frames_captured;
-    pthread_mutex_t frame_lock;
+    // pthread_mutex_t frame_lock;
     id              avf_delegate;
     id              avf_audio_delegate;
 
@@ -142,12 +142,12 @@ typedef struct
 
 static void lock_frames(AVFContext* ctx)
 {
-    pthread_mutex_lock(&ctx->frame_lock);
+    // pthread_mutex_lock(&ctx->frame_lock);
 }
 
 static void unlock_frames(AVFContext* ctx)
 {
-    pthread_mutex_unlock(&ctx->frame_lock);
+    // pthread_mutex_unlock(&ctx->frame_lock);
 }
 
 /** FrameReciever class - delegate for AVCaptureSession
@@ -305,7 +305,7 @@ static void destroy_context(AVFContext* ctx)
     av_freep(&ctx->url);
     av_freep(&ctx->audio_buffer);
 
-    pthread_mutex_destroy(&ctx->frame_lock);
+    // pthread_mutex_destroy(&ctx->frame_lock);
 
     if (ctx->current_frame) {
         CFRelease(ctx->current_frame);
@@ -835,7 +835,7 @@ static int avf_read_header(AVFormatContext *s)
 
     ctx->num_video_devices = [devices count] + [devices_muxed count];
 
-    pthread_mutex_init(&ctx->frame_lock, NULL);
+    // pthread_mutex_init(&ctx->frame_lock, NULL);
 
 #if !TARGET_OS_IPHONE && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     CGGetActiveDisplayList(0, NULL, &num_screens);

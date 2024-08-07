@@ -41,14 +41,16 @@
 
 #define REF_INVALID_SCALE 0xFFFF
 
-enum MVJoint {
+enum MVJoint
+{
     MV_JOINT_ZERO,
     MV_JOINT_H,
     MV_JOINT_V,
     MV_JOINT_HV,
 };
 
-typedef struct ProbContext {
+typedef struct ProbContext
+{
     uint8_t y_mode[4][9];
     uint8_t uv_mode[10][9];
     uint8_t filter[4][2];
@@ -62,7 +64,8 @@ typedef struct ProbContext {
     uint8_t tx8p[2];
     uint8_t skip[3];
     uint8_t mv_joint[3];
-    struct {
+    struct
+    {
         uint8_t sign;
         uint8_t classes[10];
         uint8_t class0;
@@ -75,13 +78,15 @@ typedef struct ProbContext {
     uint8_t partition[4][4][3];
 } ProbContext;
 
-typedef struct VP9Filter {
+typedef struct VP9Filter
+{
     uint8_t level[8 * 8];
     uint8_t /* bit=col */ mask[2 /* 0=y, 1=uv */][2 /* 0=col, 1=row */]
                               [8 /* rows */][4 /* 0=16, 1=8, 2=4, 3=inner4 */];
 } VP9Filter;
 
-typedef struct VP9Block {
+typedef struct VP9Block
+{
     uint8_t seg_id, intra, comp, ref[2], mode[4], uvmode, skip;
     enum FilterMode filter;
     VP9mv mv[4 /* b_idx */][2 /* ref */];
@@ -93,7 +98,8 @@ typedef struct VP9Block {
 
 typedef struct VP9TileData VP9TileData;
 
-typedef struct VP9Context {
+typedef struct VP9Context
+{
     VP9SharedContext s;
     VP9TileData *td;
 
@@ -104,13 +110,14 @@ typedef struct VP9Context {
     int pass, active_tile_cols;
 
 #if HAVE_THREADS
-    pthread_mutex_t progress_mutex;
-    pthread_cond_t progress_cond;
+    // pthread_mutex_t progress_mutex;
+    // pthread_cond_t progress_cond;
     atomic_int *entries;
-    unsigned pthread_init_cnt;
+    unsigned // pthread_init_cnt;
 #endif
 
-    uint8_t ss_h, ss_v;
+        uint8_t ss_h,
+        ss_v;
     uint8_t last_bpp, bpp_index, bytesperpixel;
     uint8_t last_keyframe;
     // sb_cols/rows, rows/cols and last_fmt are used for allocating all internal
@@ -122,15 +129,18 @@ typedef struct VP9Context {
     unsigned sb_cols, sb_rows, rows, cols;
     ProgressFrame next_refs[8];
 
-    struct {
+    struct
+    {
         uint8_t lim_lut[64];
         uint8_t mblim_lut[64];
     } filter_lut;
-    struct {
+    struct
+    {
         ProbContext p;
         uint8_t coef[4][2][2][6][6][3];
     } prob_ctx[4];
-    struct {
+    struct
+    {
         ProbContext p;
         uint8_t coef[4][2][2][6][6][11];
     } prob;
@@ -141,12 +151,12 @@ typedef struct VP9Context {
     // FIXME maybe merge some of the below in a flags field?
     uint8_t *above_y_nnz_ctx;
     uint8_t *above_uv_nnz_ctx[2];
-    uint8_t *above_skip_ctx; // 1bit
-    uint8_t *above_txfm_ctx; // 2bit
+    uint8_t *above_skip_ctx;    // 1bit
+    uint8_t *above_txfm_ctx;    // 2bit
     uint8_t *above_segpred_ctx; // 1bit
-    uint8_t *above_intra_ctx; // 1bit
-    uint8_t *above_comp_ctx; // 1bit
-    uint8_t *above_ref_ctx; // 2bit
+    uint8_t *above_intra_ctx;   // 1bit
+    uint8_t *above_comp_ctx;    // 1bit
+    uint8_t *above_ref_ctx;     // 2bit
     uint8_t *above_filter_ctx;
     VP9mv (*above_mv_ctx)[2];
 
@@ -164,7 +174,8 @@ typedef struct VP9Context {
     int frame_extradata_pool_size;
 } VP9Context;
 
-struct VP9TileData {
+struct VP9TileData
+{
     const VP9Context *s;
     VPXRangeCoder *c_b;
     VPXRangeCoder *c;
@@ -174,7 +185,8 @@ struct VP9TileData {
     VP9Block *b_base, *b;
     unsigned tile_col_start;
 
-    struct {
+    struct
+    {
         unsigned y_mode[4][10];
         unsigned uv_mode[10][10];
         unsigned filter[4][3];
@@ -188,7 +200,8 @@ struct VP9TileData {
         unsigned tx8p[2][2];
         unsigned skip[3][2];
         unsigned mv_joint[4];
-        struct {
+        struct
+        {
             unsigned sign[2];
             unsigned classes[11];
             unsigned class0[2];
@@ -204,35 +217,54 @@ struct VP9TileData {
     } counts;
 
     // whole-frame cache
-    DECLARE_ALIGNED(32, uint8_t, edge_emu_buffer)[135 * 144 * 2];
+    DECLARE_ALIGNED(32, uint8_t, edge_emu_buffer)
+    [135 * 144 * 2];
 
     // contextual (left) cache
-    DECLARE_ALIGNED(16, uint8_t, left_y_nnz_ctx)[16];
-    DECLARE_ALIGNED(16, uint8_t, left_mode_ctx)[16];
-    DECLARE_ALIGNED(16, VP9mv, left_mv_ctx)[16][2];
-    DECLARE_ALIGNED(16, uint8_t, left_uv_nnz_ctx)[2][16];
-    DECLARE_ALIGNED(8, uint8_t, left_partition_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_skip_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_txfm_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_segpred_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_intra_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_comp_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_ref_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_filter_ctx)[8];
+    DECLARE_ALIGNED(16, uint8_t, left_y_nnz_ctx)
+    [16];
+    DECLARE_ALIGNED(16, uint8_t, left_mode_ctx)
+    [16];
+    DECLARE_ALIGNED(16, VP9mv, left_mv_ctx)
+    [16][2];
+    DECLARE_ALIGNED(16, uint8_t, left_uv_nnz_ctx)
+    [2][16];
+    DECLARE_ALIGNED(8, uint8_t, left_partition_ctx)
+    [8];
+    DECLARE_ALIGNED(8, uint8_t, left_skip_ctx)
+    [8];
+    DECLARE_ALIGNED(8, uint8_t, left_txfm_ctx)
+    [8];
+    DECLARE_ALIGNED(8, uint8_t, left_segpred_ctx)
+    [8];
+    DECLARE_ALIGNED(8, uint8_t, left_intra_ctx)
+    [8];
+    DECLARE_ALIGNED(8, uint8_t, left_comp_ctx)
+    [8];
+    DECLARE_ALIGNED(8, uint8_t, left_ref_ctx)
+    [8];
+    DECLARE_ALIGNED(8, uint8_t, left_filter_ctx)
+    [8];
     // block reconstruction intermediates
-    DECLARE_ALIGNED(32, uint8_t, tmp_y)[64 * 64 * 2];
-    DECLARE_ALIGNED(32, uint8_t, tmp_uv)[2][64 * 64 * 2];
-    struct { int x, y; } min_mv, max_mv;
+    DECLARE_ALIGNED(32, uint8_t, tmp_y)
+    [64 * 64 * 2];
+    DECLARE_ALIGNED(32, uint8_t, tmp_uv)
+    [2][64 * 64 * 2];
+    struct
+    {
+        int x, y;
+    } min_mv, max_mv;
     int16_t *block_base, *block, *uvblock_base[2], *uvblock[2];
     uint8_t *eob_base, *uveob_base[2], *eob, *uveob[2];
 
     // error message
     int error_info;
-    struct {
-        unsigned int row:13;
-        unsigned int col:13;
-        unsigned int block_size_idx_x:2;
-        unsigned int block_size_idx_y:2;
+    struct
+    {
+        unsigned int row : 13;
+        unsigned int col : 13;
+        unsigned int block_size_idx_x : 2;
+        unsigned int block_size_idx_y : 2;
     } *block_structure;
     unsigned int nb_block_structure;
 };

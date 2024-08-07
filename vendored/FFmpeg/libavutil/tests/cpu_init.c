@@ -40,19 +40,19 @@ int main(void)
     int cpu_flags1;
     int cpu_flags2;
     int ret;
-    pthread_t thread1;
-    pthread_t thread2;
+    // pthread_t thread1;
+    // pthread_t thread2;
 
-    if ((ret = pthread_create(&thread1, NULL, thread_main, &cpu_flags1))) {
-        fprintf(stderr, "pthread_create failed: %s.\n", strerror(ret));
+    if ((ret = // pthread_create(&thread1, NULL, thread_main, &cpu_flags1))) {
+        fprintf(stderr, "// pthread_create failed: %s.\n", strerror(ret));
+        return 1;
+}
+    if ((ret = // pthread_create(&thread2, NULL, thread_main, &cpu_flags2))) {
+        fprintf(stderr, "// pthread_create failed: %s.\n", strerror(ret));
         return 1;
     }
-    if ((ret = pthread_create(&thread2, NULL, thread_main, &cpu_flags2))) {
-        fprintf(stderr, "pthread_create failed: %s.\n", strerror(ret));
-        return 1;
-    }
-    pthread_join(thread1, NULL);
-    pthread_join(thread2, NULL);
+    // pthread_join(thread1, NULL);
+    // pthread_join(thread2, NULL);
 
     if (cpu_flags1 < 0)
         return 2;
@@ -62,4 +62,4 @@ int main(void)
         return 3;
 
     return 0;
-}
+    }

@@ -39,60 +39,68 @@
 #define INDENT_4 INDENT_3 INDENT_1
 #define INDENT_5 INDENT_4 INDENT_1
 #define INDENT_6 INDENT_5 INDENT_1
-#define C(N, S)          INDENT(N) #S "\n"
+#define C(N, S) INDENT(N) #S "\n"
 
 #define GLSLC(N, S)                     \
-    do {                                \
+    do                                  \
+    {                                   \
         av_bprintf(&shd->src, C(N, S)); \
     } while (0)
 
 #define GLSLA(...)                          \
-    do {                                    \
+    do                                      \
+    {                                       \
         av_bprintf(&shd->src, __VA_ARGS__); \
     } while (0)
 
 #define GLSLF(N, S, ...)                             \
-    do {                                             \
+    do                                               \
+    {                                                \
         av_bprintf(&shd->src, C(N, S), __VA_ARGS__); \
     } while (0)
 
 #define GLSLD(D)                                        \
-    do {                                                \
+    do                                                  \
+    {                                                   \
         av_bprintf(&shd->src, "\n");                    \
         av_bprint_append_data(&shd->src, D, strlen(D)); \
         av_bprintf(&shd->src, "\n");                    \
     } while (0)
 
 /* Helper, pretty much every Vulkan return value needs to be checked */
-#define RET(x)                                                                 \
-    do {                                                                       \
-        if ((err = (x)) < 0)                                                   \
-            goto fail;                                                         \
+#define RET(x)               \
+    do                       \
+    {                        \
+        if ((err = (x)) < 0) \
+            goto fail;       \
     } while (0)
 
-#define DUP_SAMPLER(x) { x, x, x, x }
+#define DUP_SAMPLER(x) {x, x, x, x}
 
-typedef struct FFVkSPIRVShader {
-    const char *name;                       /* Name for id/debugging purposes */
+typedef struct FFVkSPIRVShader
+{
+    const char *name; /* Name for id/debugging purposes */
     AVBPrint src;
-    int local_size[3];                      /* Compute shader workgroup sizes */
+    int local_size[3]; /* Compute shader workgroup sizes */
     VkPipelineShaderStageCreateInfo shader;
     VkPipelineShaderStageRequiredSubgroupSizeCreateInfo subgroup_info;
 } FFVkSPIRVShader;
 
-typedef struct FFVulkanDescriptorSetBinding {
-    const char         *name;
-    VkDescriptorType    type;
-    const char         *mem_layout;  /* Storage images (rgba8, etc.) and buffers (std430, etc.) */
-    const char         *mem_quali;   /* readonly, writeonly, etc. */
-    const char         *buf_content; /* For buffers */
-    uint32_t            dimensions;  /* Needed for e.g. sampler%iD */
-    uint32_t            elems;       /* 0 - scalar, 1 or more - vector */
-    VkShaderStageFlags  stages;
-    VkSampler           samplers[4]; /* Sampler to use for all elems */
+typedef struct FFVulkanDescriptorSetBinding
+{
+    const char *name;
+    VkDescriptorType type;
+    const char *mem_layout;  /* Storage images (rgba8, etc.) and buffers (std430, etc.) */
+    const char *mem_quali;   /* readonly, writeonly, etc. */
+    const char *buf_content; /* For buffers */
+    uint32_t dimensions;     /* Needed for e.g. sampler%iD */
+    uint32_t elems;          /* 0 - scalar, 1 or more - vector */
+    VkShaderStageFlags stages;
+    VkSampler samplers[4]; /* Sampler to use for all elems */
 } FFVulkanDescriptorSetBinding;
 
-typedef struct FFVkBuffer {
+typedef struct FFVkBuffer
+{
     VkBuffer buf;
     VkDeviceMemory mem;
     VkMemoryPropertyFlagBits flags;
@@ -107,19 +115,21 @@ typedef struct FFVkBuffer {
     uint8_t *mapped_mem;
 } FFVkBuffer;
 
-typedef struct FFVkQueueFamilyCtx {
+typedef struct FFVkQueueFamilyCtx
+{
     int queue_family;
     int nb_queues;
 } FFVkQueueFamilyCtx;
 
-typedef struct FFVulkanDescriptorSet {
-    VkDescriptorSetLayout  layout;
-    FFVkBuffer             buf;
-    uint8_t               *desc_mem;
-    VkDeviceSize           layout_size;
-    VkDeviceSize           aligned_size; /* descriptorBufferOffsetAlignment */
-    VkDeviceSize           total_size; /* Once registered to an exec context */
-    VkBufferUsageFlags     usage;
+typedef struct FFVulkanDescriptorSet
+{
+    VkDescriptorSetLayout layout;
+    FFVkBuffer buf;
+    uint8_t *desc_mem;
+    VkDeviceSize layout_size;
+    VkDeviceSize aligned_size; /* descriptorBufferOffsetAlignment */
+    VkDeviceSize total_size;   /* Once registered to an exec context */
+    VkBufferUsageFlags usage;
 
     VkDescriptorSetLayoutBinding *binding;
     VkDeviceSize *binding_offset;
@@ -129,12 +139,13 @@ typedef struct FFVulkanDescriptorSet {
     int singular;
 } FFVulkanDescriptorSet;
 
-typedef struct FFVulkanPipeline {
+typedef struct FFVulkanPipeline
+{
     VkPipelineBindPoint bind_point;
 
     /* Contexts */
     VkPipelineLayout pipeline_layout;
-    VkPipeline       pipeline;
+    VkPipeline pipeline;
 
     /* Push consts */
     VkPushConstantRange *push_consts;
@@ -150,10 +161,11 @@ typedef struct FFVulkanPipeline {
     int nb_descriptor_sets;
 } FFVulkanPipeline;
 
-typedef struct FFVkExecContext {
+typedef struct FFVkExecContext
+{
     uint32_t idx;
     const struct FFVkExecPool *parent;
-    pthread_mutex_t lock;
+    // pthread_mutex_t lock;
     int had_submission;
 
     /* Queue for the execution context */
@@ -208,7 +220,8 @@ typedef struct FFVkExecContext {
     unsigned int frame_update_alloc_size;
 } FFVkExecContext;
 
-typedef struct FFVkExecPool {
+typedef struct FFVkExecPool
+{
     FFVkExecContext *contexts;
     atomic_int_least64_t idx;
 
@@ -226,11 +239,12 @@ typedef struct FFVkExecPool {
     size_t qd_size;
 } FFVkExecPool;
 
-typedef struct FFVulkanContext {
+typedef struct FFVulkanContext
+{
     const AVClass *class; /* Filters and encoders use this */
 
-    FFVulkanFunctions     vkfn;
-    FFVulkanExtensions    extensions;
+    FFVulkanFunctions vkfn;
+    FFVulkanExtensions extensions;
     VkPhysicalDeviceProperties2 props;
     VkPhysicalDeviceDriverProperties driver_props;
     VkPhysicalDeviceMemoryProperties mprops;
@@ -250,22 +264,22 @@ typedef struct FFVulkanContext {
     VkPhysicalDeviceVulkan12Features feats_12;
     VkPhysicalDeviceFeatures2 feats;
 
-    AVHWDeviceContext     *device;
+    AVHWDeviceContext *device;
     AVVulkanDeviceContext *hwctx;
 
-    AVBufferRef           *input_frames_ref;
-    AVBufferRef           *frames_ref;
-    AVHWFramesContext     *frames;
+    AVBufferRef *input_frames_ref;
+    AVBufferRef *frames_ref;
+    AVHWFramesContext *frames;
     AVVulkanFramesContext *hwfc;
 
-    uint32_t               qfs[5];
-    int                    nb_qfs;
+    uint32_t qfs[5];
+    int nb_qfs;
 
     /* Properties */
-    int                 output_width;
-    int                output_height;
+    int output_width;
+    int output_height;
     enum AVPixelFormat output_format;
-    enum AVPixelFormat  input_format;
+    enum AVPixelFormat input_format;
 } FFVulkanContext;
 
 static inline int ff_vk_count_images(AVVkFrame *f)
@@ -280,7 +294,8 @@ static inline int ff_vk_count_images(AVVkFrame *f)
 static inline const void *ff_vk_find_struct(const void *chain, VkStructureType stype)
 {
     const VkBaseInStructure *in = chain;
-    while (in) {
+    while (in)
+    {
         if (in->sType == stype)
             return in;
 
@@ -383,9 +398,9 @@ void ff_vk_frame_barrier(FFVulkanContext *s, FFVkExecContext *e,
                          AVFrame *pic, VkImageMemoryBarrier2 *bar, int *nb_bar,
                          VkPipelineStageFlags src_stage,
                          VkPipelineStageFlags dst_stage,
-                         VkAccessFlagBits     new_access,
-                         VkImageLayout        new_layout,
-                         uint32_t             new_qf);
+                         VkAccessFlagBits new_access,
+                         VkImageLayout new_layout,
+                         uint32_t new_qf);
 
 /**
  * Memory/buffer/image allocation helpers.
@@ -411,13 +426,13 @@ int ff_vk_unmap_buffers(FFVulkanContext *s, FFVkBuffer **buf, int nb_buffers,
 static inline int ff_vk_map_buffer(FFVulkanContext *s, FFVkBuffer *buf, uint8_t **mem,
                                    int invalidate)
 {
-    return ff_vk_map_buffers(s, (FFVkBuffer *[]){ buf }, mem,
+    return ff_vk_map_buffers(s, (FFVkBuffer *[]){buf}, mem,
                              1, invalidate);
 }
 
 static inline int ff_vk_unmap_buffer(FFVulkanContext *s, FFVkBuffer *buf, int flush)
 {
-    return ff_vk_unmap_buffers(s, (FFVkBuffer *[]){ buf }, 1, flush);
+    return ff_vk_unmap_buffers(s, (FFVkBuffer *[]){buf}, 1, flush);
 }
 
 void ff_vk_free_buf(FFVulkanContext *s, FFVkBuffer *buf);

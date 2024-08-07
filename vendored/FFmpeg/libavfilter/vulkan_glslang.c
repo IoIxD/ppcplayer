@@ -25,8 +25,8 @@
 #include "libavutil/mem.h"
 #include "libavutil/avassert.h"
 
-static pthread_mutex_t glslc_mutex = PTHREAD_MUTEX_INITIALIZER;
-static int glslc_refcount = 0;
+static // pthread_mutex_t glslc_mutex = // pthread_MUTEX_INITIALIZER;
+    static int glslc_refcount = 0;
 
 static const glslang_resource_t glslc_resource_limits = {
     .max_lights = 32,
@@ -133,8 +133,7 @@ static const glslang_resource_t glslc_resource_limits = {
         .general_sampler_indexing = 1,
         .general_variable_indexing = 1,
         .general_constant_matrix_vector_indexing = 1,
-    }
-};
+    }};
 
 static int glslc_shader_compile(FFVkSPIRVCompiler *ctx, void *avctx,
                                 FFVkSPIRVShader *shd, uint8_t **data,
@@ -146,33 +145,33 @@ static int glslc_shader_compile(FFVkSPIRVCompiler *ctx, void *avctx,
     glslang_program_t *glslc_program;
 
     static const glslang_stage_t glslc_stage[] = {
-        [VK_SHADER_STAGE_VERTEX_BIT]   = GLSLANG_STAGE_VERTEX,
+        [VK_SHADER_STAGE_VERTEX_BIT] = GLSLANG_STAGE_VERTEX,
         [VK_SHADER_STAGE_FRAGMENT_BIT] = GLSLANG_STAGE_FRAGMENT,
-        [VK_SHADER_STAGE_COMPUTE_BIT]  = GLSLANG_STAGE_COMPUTE,
+        [VK_SHADER_STAGE_COMPUTE_BIT] = GLSLANG_STAGE_COMPUTE,
     };
 
     const glslang_input_t glslc_input = {
-        .language                          = GLSLANG_SOURCE_GLSL,
-        .stage                             = glslc_stage[shd->shader.stage],
-        .client                            = GLSLANG_CLIENT_VULKAN,
-        /* GLSLANG_TARGET_VULKAN_1_2 before 11.6 resulted in targeting 1.0 */
-#if (((GLSLANG_VERSION_MAJOR) > 11) || ((GLSLANG_VERSION_MAJOR) == 11 && \
-    (((GLSLANG_VERSION_MINOR) >  6) || ((GLSLANG_VERSION_MINOR) ==  6 && \
-     ((GLSLANG_VERSION_PATCH) > 0)))))
-        .client_version                    = GLSLANG_TARGET_VULKAN_1_2,
-        .target_language_version           = GLSLANG_TARGET_SPV_1_5,
+        .language = GLSLANG_SOURCE_GLSL,
+        .stage = glslc_stage[shd->shader.stage],
+        .client = GLSLANG_CLIENT_VULKAN,
+    /* GLSLANG_TARGET_VULKAN_1_2 before 11.6 resulted in targeting 1.0 */
+#if (((GLSLANG_VERSION_MAJOR) > 11) || ((GLSLANG_VERSION_MAJOR) == 11 &&                                   \
+                                        (((GLSLANG_VERSION_MINOR) > 6) || ((GLSLANG_VERSION_MINOR) == 6 && \
+                                                                           ((GLSLANG_VERSION_PATCH) > 0)))))
+        .client_version = GLSLANG_TARGET_VULKAN_1_2,
+        .target_language_version = GLSLANG_TARGET_SPV_1_5,
 #else
-        .client_version                    = GLSLANG_TARGET_VULKAN_1_1,
-        .target_language_version           = GLSLANG_TARGET_SPV_1_3,
+        .client_version = GLSLANG_TARGET_VULKAN_1_1,
+        .target_language_version = GLSLANG_TARGET_SPV_1_3,
 #endif
-        .target_language                   = GLSLANG_TARGET_SPV,
-        .code                              = shd->src.str,
-        .default_version                   = 460,
-        .default_profile                   = GLSLANG_NO_PROFILE,
+        .target_language = GLSLANG_TARGET_SPV,
+        .code = shd->src.str,
+        .default_version = 460,
+        .default_profile = GLSLANG_NO_PROFILE,
         .force_default_version_and_profile = false,
-        .forward_compatible                = false,
-        .messages                          = GLSLANG_MSG_DEFAULT_BIT,
-        .resource                          = &glslc_resource_limits,
+        .forward_compatible = false,
+        .messages = GLSLANG_MSG_DEFAULT_BIT,
+        .resource = &glslc_resource_limits,
     };
 
     av_assert0(glslc_refcount);
@@ -182,7 +181,8 @@ static int glslc_shader_compile(FFVkSPIRVCompiler *ctx, void *avctx,
     if (!(glslc_shader = glslang_shader_create(&glslc_input)))
         return AVERROR(ENOMEM);
 
-    if (!glslang_shader_preprocess(glslc_shader, &glslc_input)) {
+    if (!glslang_shader_preprocess(glslc_shader, &glslc_input))
+    {
         ff_vk_shader_print(avctx, shd, AV_LOG_WARNING);
         av_log(avctx, AV_LOG_ERROR, "Unable to preprocess shader: %s (%s)!\n",
                glslang_shader_get_info_log(glslc_shader),
@@ -191,7 +191,8 @@ static int glslc_shader_compile(FFVkSPIRVCompiler *ctx, void *avctx,
         return AVERROR(EINVAL);
     }
 
-    if (!glslang_shader_parse(glslc_shader, &glslc_input)) {
+    if (!glslang_shader_parse(glslc_shader, &glslc_input))
+    {
         ff_vk_shader_print(avctx, shd, AV_LOG_WARNING);
         av_log(avctx, AV_LOG_ERROR, "Unable to parse shader: %s (%s)!\n",
                glslang_shader_get_info_log(glslc_shader),
@@ -200,7 +201,8 @@ static int glslc_shader_compile(FFVkSPIRVCompiler *ctx, void *avctx,
         return AVERROR(EINVAL);
     }
 
-    if (!(glslc_program = glslang_program_create())) {
+    if (!(glslc_program = glslang_program_create()))
+    {
         glslang_shader_delete(glslc_shader);
         return AVERROR(EINVAL);
     }
@@ -208,7 +210,8 @@ static int glslc_shader_compile(FFVkSPIRVCompiler *ctx, void *avctx,
     glslang_program_add_shader(glslc_program, glslc_shader);
 
     if (!glslang_program_link(glslc_program, GLSLANG_MSG_SPV_RULES_BIT |
-                                             GLSLANG_MSG_VULKAN_RULES_BIT)) {
+                                                 GLSLANG_MSG_VULKAN_RULES_BIT))
+    {
         ff_vk_shader_print(avctx, shd, AV_LOG_WARNING);
         av_log(avctx, AV_LOG_ERROR, "Unable to link shader: %s (%s)!\n",
                glslang_program_get_info_log(glslc_program),
@@ -221,10 +224,13 @@ static int glslc_shader_compile(FFVkSPIRVCompiler *ctx, void *avctx,
     glslang_program_SPIRV_generate(glslc_program, glslc_input.stage);
 
     messages = glslang_program_SPIRV_get_messages(glslc_program);
-    if (messages) {
+    if (messages)
+    {
         ff_vk_shader_print(avctx, shd, AV_LOG_WARNING);
         av_log(avctx, AV_LOG_WARNING, "%s\n", messages);
-    } else {
+    }
+    else
+    {
         ff_vk_shader_print(avctx, shd, AV_LOG_VERBOSE);
     }
 
@@ -252,10 +258,10 @@ static void glslc_uninit(FFVkSPIRVCompiler **ctx)
     if (!ctx || !*ctx)
         return;
 
-    pthread_mutex_lock(&glslc_mutex);
+    // pthread_mutex_lock(&glslc_mutex);
     if (glslc_refcount && (--glslc_refcount == 0))
         glslang_finalize_process();
-    pthread_mutex_unlock(&glslc_mutex);
+    // pthread_mutex_unlock(&glslc_mutex);
 
     av_freep(ctx);
 }
@@ -267,17 +273,19 @@ FFVkSPIRVCompiler *ff_vk_glslang_init(void)
         return NULL;
 
     ret->compile_shader = glslc_shader_compile;
-    ret->free_shader    = glslc_shader_free;
-    ret->uninit         = glslc_uninit;
+    ret->free_shader = glslc_shader_free;
+    ret->uninit = glslc_uninit;
 
-    pthread_mutex_lock(&glslc_mutex);
-    if (!glslc_refcount++) {
-        if (!glslang_initialize_process()) {
+    // pthread_mutex_lock(&glslc_mutex);
+    if (!glslc_refcount++)
+    {
+        if (!glslang_initialize_process())
+        {
             av_freep(&ret);
             glslc_refcount--;
         }
     }
-    pthread_mutex_unlock(&glslc_mutex);
+    // pthread_mutex_unlock(&glslc_mutex);
 
     return ret;
 }

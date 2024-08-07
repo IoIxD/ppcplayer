@@ -16,8 +16,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef AVCODEC_PTHREAD_INTERNAL_H
-#define AVCODEC_PTHREAD_INTERNAL_H
+#ifndef AVCODEC_ // pthread_INTERNAL_H
+#define AVCODEC_ // pthread_INTERNAL_H
 
 #include "avcodec.h"
 
@@ -36,9 +36,9 @@ void ff_frame_thread_free(AVCodecContext *avctx, int thread_count);
  * Initialize/destroy a list of mutexes/conditions contained in a structure.
  * The positions of these mutexes/conditions in the structure are given by
  * their offsets. Because it is undefined behaviour to destroy
- * an uninitialized mutex/condition, ff_pthread_init() stores the number
+ * an uninitialized mutex/condition, ff_// pthread_init() stores the number
  * of successfully initialized mutexes and conditions in the object itself
- * and ff_pthread_free() uses this number to destroy exactly the mutexes and
+ * and ff_// pthread_free() uses this number to destroy exactly the mutexes and
  * condition variables that have been successfully initialized.
  *
  * @param     obj     The object containing the mutexes/conditions.
@@ -50,17 +50,17 @@ void ff_frame_thread_free(AVCodecContext *avctx, int thread_count);
  *                    contains the offsets of all the mutexes, the second
  *                    contains the offsets of all the condition variables.
  */
-int  ff_pthread_init(void *obj, const unsigned offsets[]);
-void ff_pthread_free(void *obj, const unsigned offsets[]);
+int ff_      // pthread_init(void *obj, const unsigned offsets[]);
+    void ff_ // pthread_free(void *obj, const unsigned offsets[]);
 
 /**
  * Macros to help creating the above lists. mutexes and conds need
  * to be parentheses-enclosed lists of offsets in the containing structure.
  */
 #define OFFSET_ARRAY(...) __VA_ARGS__, THREAD_SENTINEL
-#define DEFINE_OFFSET_ARRAY(type, name, cnt_variable, mutexes, conds)         \
-static const unsigned name ## _offsets[] = { offsetof(type, cnt_variable),    \
-                                             OFFSET_ARRAY mutexes,            \
-                                             OFFSET_ARRAY conds }
+#define DEFINE_OFFSET_ARRAY(type, name, cnt_variable, mutexes, conds)       \
+    static const unsigned name##_offsets[] = {offsetof(type, cnt_variable), \
+                                              OFFSET_ARRAY mutexes,         \
+                                              OFFSET_ARRAY conds}
 
-#endif // AVCODEC_PTHREAD_INTERNAL_H
+#endif // AVCODEC_// pthread_INTERNAL_H

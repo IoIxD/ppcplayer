@@ -29,7 +29,8 @@
 #define IDeckLinkProfileAttributes IDeckLinkAttributes
 #endif
 
-extern "C" {
+extern "C"
+{
 #include "libavutil/mem.h"
 #include "libavcodec/packet_internal.h"
 #include "libavfilter/ccfifo.h"
@@ -51,12 +52,12 @@ static char *dup_wchar_to_utf8(wchar_t *w)
 {
     char *s = NULL;
     int l = WideCharToMultiByte(CP_UTF8, 0, w, -1, 0, 0, 0, 0);
-    s = (char *) av_malloc(l);
+    s = (char *)av_malloc(l);
     if (s)
         WideCharToMultiByte(CP_UTF8, 0, w, -1, s, l, 0, 0);
     return s;
 }
-#define DECKLINK_STR    OLECHAR *
+#define DECKLINK_STR OLECHAR *
 #define DECKLINK_STRDUP dup_wchar_to_utf8
 #define DECKLINK_FREE(s) SysFreeString(s)
 #elif defined(__APPLE__)
@@ -66,31 +67,33 @@ static char *dup_cfstring_to_utf8(CFStringRef w)
     CFStringGetCString(w, s, 255, kCFStringEncodingUTF8);
     return av_strdup(s);
 }
-#define DECKLINK_STR    const __CFString *
+#define DECKLINK_STR const __CFString *
 #define DECKLINK_STRDUP dup_cfstring_to_utf8
 #define DECKLINK_FREE(s) CFRelease(s)
 #else
-#define DECKLINK_STR    const char *
+#define DECKLINK_STR const char *
 #define DECKLINK_STRDUP av_strdup
 /* free() is needed for a string returned by the DeckLink SDL. */
-#define DECKLINK_FREE(s) free((void *) s)
+#define DECKLINK_FREE(s) free((void *)s)
 #endif
 
 class decklink_output_callback;
 class decklink_input_callback;
 
-typedef struct DecklinkPacketQueue {
+typedef struct DecklinkPacketQueue
+{
     PacketList pkt_list;
     int nb_packets;
     unsigned long long size;
     int abort_request;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
+    // pthread_mutex_t mutex;
+    // pthread_cond_t cond;
     AVFormatContext *avctx;
     int64_t max_q_size;
 } DecklinkPacketQueue;
 
-struct decklink_ctx {
+struct decklink_ctx
+{
     /* DeckLink SDK interfaces */
     IDeckLink *dl;
     IDeckLinkOutput *dlo;
@@ -114,7 +117,7 @@ struct decklink_ctx {
     /* Capture buffer queue */
     DecklinkPacketQueue queue;
 
-    CCFifo cc_fifo;      ///< closed captions
+    CCFifo cc_fifo; ///< closed captions
 
     /* Output VANC queue */
     DecklinkPacketQueue vanc_queue;
@@ -151,8 +154,8 @@ struct decklink_ctx {
     int frames_preroll;
     int frames_buffer;
 
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
+    // pthread_mutex_t mutex;
+    // pthread_cond_t cond;
     int frames_buffer_available_spots;
     int autodetect;
 
@@ -162,10 +165,14 @@ struct decklink_ctx {
 
     int channels;
     int audio_depth;
-    unsigned long tc_seen;    // used with option wait_for_tc
+    unsigned long tc_seen; // used with option wait_for_tc
 };
 
-typedef enum { DIRECTION_IN, DIRECTION_OUT} decklink_direction_t;
+typedef enum
+{
+    DIRECTION_IN,
+    DIRECTION_OUT
+} decklink_direction_t;
 
 static const BMDPixelFormat decklink_raw_format_map[] = {
     (BMDPixelFormat)0,
@@ -216,8 +223,7 @@ static const BMDLinkConfiguration decklink_link_conf_map[] = {
     (BMDLinkConfiguration)0,
     bmdLinkConfigurationSingleLink,
     bmdLinkConfigurationDualLink,
-    bmdLinkConfigurationQuadLink
-};
+    bmdLinkConfigurationQuadLink};
 
 #if BLACKMAGIC_DECKLINK_API_VERSION >= 0x0b000000
 static const BMDProfileID decklink_profile_id_map[] = {
@@ -237,7 +243,7 @@ int ff_decklink_list_devices(AVFormatContext *avctx, struct AVDeviceInfoList *de
 void ff_decklink_list_devices_legacy(AVFormatContext *avctx, int show_inputs, int show_outputs);
 int ff_decklink_list_formats(AVFormatContext *avctx, decklink_direction_t direction = DIRECTION_OUT);
 void ff_decklink_cleanup(AVFormatContext *avctx);
-int ff_decklink_init_device(AVFormatContext *avctx, const char* name);
+int ff_decklink_init_device(AVFormatContext *avctx, const char *name);
 
 void ff_decklink_packet_queue_init(AVFormatContext *avctx, DecklinkPacketQueue *q, int64_t queue_size);
 void ff_decklink_packet_queue_flush(DecklinkPacketQueue *q);

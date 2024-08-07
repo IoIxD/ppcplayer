@@ -11,11 +11,7 @@ extern "C"
 // #include "console/Console.hpp"
 #include <stdio.h>
 
-#ifdef __RETRO68__
-#include "apple/usleep.h"
-#else
-#include <unistd.h>
-#endif
+#include <Timer.h>
 
 static player::Player *pl = NULL;
 
@@ -27,11 +23,11 @@ int window;
 GLint format = GL_RGB;
 void InitTexture(GLsizei width, GLsizei height, uint8_t *data);
 
+static QElem what;
+
 int main(int argc, char **argv)
 {
-#ifdef __RETRO68__
-    usleep_setup();
-#endif
+    InsTime(&what);
     printf("Type a file to open: \n");
     char buf[255];
     scanf("%s", &buf);
@@ -95,7 +91,7 @@ void idle(void)
     auto framerate = pl->framerate();
     pl->step();
     GL_COMMAND(glutPostRedisplay());
-    usleep(framerate);
+    PrimeTime(&what, framerate);
 }
 
 void display_hasVideo(void)

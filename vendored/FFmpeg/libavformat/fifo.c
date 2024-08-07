@@ -30,11 +30,12 @@
 #include "internal.h"
 #include "mux.h"
 
-#define FIFO_DEFAULT_QUEUE_SIZE              60
-#define FIFO_DEFAULT_MAX_RECOVERY_ATTEMPTS   0
+#define FIFO_DEFAULT_QUEUE_SIZE 60
+#define FIFO_DEFAULT_MAX_RECOVERY_ATTEMPTS 0
 #define FIFO_DEFAULT_RECOVERY_WAIT_TIME_USEC 5000000 // 5 seconds
 
-typedef struct FifoContext {
+typedef struct FifoContext
+{
     const AVClass *class;
     AVFormatContext *avf;
 
@@ -44,7 +45,7 @@ typedef struct FifoContext {
     int queue_size;
     AVThreadMessageQueue *queue;
 
-    pthread_t writer_thread;
+    // pthread_t writer_thread;
 
     /* Return value of last write_trailer_call */
     int write_trailer_ret;
@@ -75,7 +76,7 @@ typedef struct FifoContext {
      * from failure or queue overflow */
     int restart_with_keyframe;
 
-    pthread_mutex_t overflow_flag_lock;
+    // pthread_mutex_t overflow_flag_lock;
     int overflow_flag_lock_initialized;
     /* Value > 0 signals queue overflow */
     volatile uint8_t overflow_flag;
@@ -85,7 +86,8 @@ typedef struct FifoContext {
     int64_t timeshift;
 } FifoContext;
 
-typedef struct FifoThreadContext {
+typedef struct FifoThreadContext
+{
     AVFormatContext *avf;
 
     /* Timestamp of last failure.
@@ -108,14 +110,16 @@ typedef struct FifoThreadContext {
     int64_t last_received_dts;
 } FifoThreadContext;
 
-typedef enum FifoMessageType {
+typedef enum FifoMessageType
+{
     FIFO_NOOP,
     FIFO_WRITE_HEADER,
     FIFO_WRITE_PACKET,
     FIFO_FLUSH_OUTPUT
 } FifoMessageType;
 
-typedef struct FifoMessage {
+typedef struct FifoMessage
+{
     FifoMessageType type;
     AVPacket pkt;
 } FifoMessage;
@@ -133,13 +137,14 @@ static int fifo_thread_write_header(FifoThreadContext *ctx)
         goto end;
 
     ret = ff_format_output_open(avf2, avf->url, &format_options);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         av_log(avf, AV_LOG_ERROR, "Error opening %s: %s\n", avf->url,
                av_err2str(ret));
         goto end;
     }
 
-    for (i = 0;i < avf2->nb_streams; i++)
+    for (i = 0; i < avf2->nb_streams; i++)
         ffstream(avf2->streams[i])->cur_dts = 0;
 
     ret = avformat_write_header(avf2, &format_options);
@@ -147,7 +152,8 @@ static int fifo_thread_write_header(FifoThreadContext *ctx)
         ctx->header_written = 1;
 
     // Check for options unrecognized by underlying muxer
-    if (format_options) {
+    if (format_options)
+    {
         const AVDictionaryEntry *entry = NULL;
         while ((entry = av_dict_iterate(format_options, entry)))
             av_log(avf2, AV_LOG_ERROR, "Unknown option '%s'\n", entry->key);
@@ -189,11 +195,15 @@ static int fifo_thread_write_packet(FifoThreadContext *ctx, AVPacket *pkt)
     if (fifo->timeshift && pkt->dts != AV_NOPTS_VALUE)
         atomic_fetch_sub_explicit(&fifo->queue_duration, next_duration(avf, pkt, &ctx->last_received_dts), memory_order_relaxed);
 
-    if (ctx->drop_until_keyframe) {
-        if (pkt->flags & AV_PKT_FLAG_KEY) {
+    if (ctx->drop_until_keyframe)
+    {
+        if (pkt->flags & AV_PKT_FLAG_KEY)
+        {
             ctx->drop_until_keyframe = 0;
             av_log(avf, AV_LOG_VERBOSE, "Keyframe received, recovering...\n");
-        } else {
+        }
+        else
+        {
             av_log(avf, AV_LOG_VERBOSE, "Dropping non-keyframe packet\n");
             av_packet_unref(pkt);
             return 0;
@@ -209,9 +219,12 @@ static int fifo_thread_write_packet(FifoThreadContext *ctx, AVPacket *pkt)
     av_packet_rescale_ts(pkt, src_tb, dst_tb);
 
     ret = av_write_frame(avf2, pkt);
-    if (ret >= 0) {
+    if (ret >= 0)
+    {
         av_packet_unref(pkt);
-    } else {
+    }
+    else
+    {
         // avoid scaling twice
         pkt->pts = orig_pts;
         pkt->dts = orig_dts;
@@ -243,13 +256,15 @@ static int fifo_thread_dispatch_message(FifoThreadContext *ctx, FifoMessage *msg
     if (msg->type == FIFO_NOOP)
         return 0;
 
-    if (!ctx->header_written) {
+    if (!ctx->header_written)
+    {
         ret = fifo_thread_write_header(ctx);
         if (ret < 0)
             return ret;
     }
 
-    switch(msg->type) {
+    switch (msg->type)
+    {
     case FIFO_WRITE_HEADER:
         av_assert0(ret >= 0);
         return ret;
@@ -263,14 +278,16 @@ static int fifo_thread_dispatch_message(FifoThreadContext *ctx, FifoMessage *msg
     return AVERROR(EINVAL);
 }
 
-static int is_recoverable(const FifoContext *fifo, int err_no) {
+static int is_recoverable(const FifoContext *fifo, int err_no)
+{
     if (!fifo->attempt_recovery)
         return 0;
 
     if (fifo->recover_any_error)
         return err_no != AVERROR_EXIT;
 
-    switch (err_no) {
+    switch (err_no)
+    {
     case AVERROR(EINVAL):
     case AVERROR(ENOSYS):
     case AVERROR_EOF:
@@ -300,22 +317,28 @@ static int fifo_thread_process_recovery_failure(FifoThreadContext *ctx, AVPacket
     av_log(avf, AV_LOG_INFO, "Recovery failed: %s\n",
            av_err2str(err_no));
 
-    if (fifo->recovery_wait_streamtime) {
+    if (fifo->recovery_wait_streamtime)
+    {
         if (pkt->pts == AV_NOPTS_VALUE)
             av_log(avf, AV_LOG_WARNING, "Packet does not contain presentation"
-                   " timestamp, recovery will be attempted immediately");
+                                        " timestamp, recovery will be attempted immediately");
         ctx->last_recovery_ts = pkt->pts;
-    } else {
+    }
+    else
+    {
         ctx->last_recovery_ts = av_gettime_relative();
     }
 
     if (fifo->max_recovery_attempts &&
-        ctx->recovery_nr >= fifo->max_recovery_attempts) {
+        ctx->recovery_nr >= fifo->max_recovery_attempts)
+    {
         av_log(avf, AV_LOG_ERROR,
                "Maximal number of %d recovery attempts reached.\n",
                fifo->max_recovery_attempts);
         ret = err_no;
-    } else {
+    }
+    else
+    {
         ret = AVERROR(EAGAIN);
     }
 
@@ -330,30 +353,40 @@ static int fifo_thread_attempt_recovery(FifoThreadContext *ctx, FifoMessage *msg
     int64_t time_since_recovery;
     int ret;
 
-    if (!is_recoverable(fifo, err_no)) {
+    if (!is_recoverable(fifo, err_no))
+    {
         ret = err_no;
         goto fail;
     }
 
-    if (ctx->header_written) {
+    if (ctx->header_written)
+    {
         fifo->write_trailer_ret = fifo_thread_write_trailer(ctx);
         ctx->header_written = 0;
     }
 
-    if (!ctx->recovery_nr) {
-        ctx->last_recovery_ts = fifo->recovery_wait_streamtime ?
-                                AV_NOPTS_VALUE : 0;
-    } else {
-        if (fifo->recovery_wait_streamtime) {
-            if (ctx->last_recovery_ts == AV_NOPTS_VALUE) {
+    if (!ctx->recovery_nr)
+    {
+        ctx->last_recovery_ts = fifo->recovery_wait_streamtime ? AV_NOPTS_VALUE : 0;
+    }
+    else
+    {
+        if (fifo->recovery_wait_streamtime)
+        {
+            if (ctx->last_recovery_ts == AV_NOPTS_VALUE)
+            {
                 AVRational tb = avf->streams[pkt->stream_index]->time_base;
                 time_since_recovery = av_rescale_q(pkt->pts - ctx->last_recovery_ts,
                                                    tb, AV_TIME_BASE_Q);
-            } else {
+            }
+            else
+            {
                 /* Enforce recovery immediately */
                 time_since_recovery = fifo->recovery_wait_time;
             }
-        } else {
+        }
+        else
+        {
             time_since_recovery = av_gettime_relative() - ctx->last_recovery_ts;
         }
 
@@ -363,10 +396,13 @@ static int fifo_thread_attempt_recovery(FifoThreadContext *ctx, FifoMessage *msg
 
     ctx->recovery_nr++;
 
-    if (fifo->max_recovery_attempts) {
+    if (fifo->max_recovery_attempts)
+    {
         av_log(avf, AV_LOG_VERBOSE, "Recovery attempt #%d/%d\n",
                ctx->recovery_nr, fifo->max_recovery_attempts);
-    } else {
+    }
+    else
+    {
         av_log(avf, AV_LOG_VERBOSE, "Recovery attempt #%d\n",
                ctx->recovery_nr);
     }
@@ -375,13 +411,19 @@ static int fifo_thread_attempt_recovery(FifoThreadContext *ctx, FifoMessage *msg
         ctx->drop_until_keyframe = 1;
 
     ret = fifo_thread_dispatch_message(ctx, msg);
-    if (ret < 0) {
-        if (is_recoverable(fifo, ret)) {
+    if (ret < 0)
+    {
+        if (is_recoverable(fifo, ret))
+        {
             return fifo_thread_process_recovery_failure(ctx, pkt, ret);
-        } else {
+        }
+        else
+        {
             goto fail;
         }
-    } else {
+    }
+    else
+    {
         av_log(avf, AV_LOG_INFO, "Recovery successful\n");
         ctx->recovery_nr = 0;
     }
@@ -399,8 +441,10 @@ static int fifo_thread_recover(FifoThreadContext *ctx, FifoMessage *msg, int err
     FifoContext *fifo = avf->priv_data;
     int ret;
 
-    do {
-        if (!fifo->recovery_wait_streamtime && ctx->recovery_nr > 0) {
+    do
+    {
+        if (!fifo->recovery_wait_streamtime && ctx->recovery_nr > 0)
+        {
             int64_t time_since_recovery = av_gettime_relative() - ctx->last_recovery_ts;
             int64_t time_to_wait = FFMAX(0, fifo->recovery_wait_time - time_since_recovery);
             if (time_to_wait)
@@ -410,7 +454,8 @@ static int fifo_thread_recover(FifoThreadContext *ctx, FifoMessage *msg, int err
         ret = fifo_thread_attempt_recovery(ctx, msg, err_no);
     } while (ret == AVERROR(EAGAIN) && !fifo->drop_pkts_on_overflow);
 
-    if (ret == AVERROR(EAGAIN) && fifo->drop_pkts_on_overflow) {
+    if (ret == AVERROR(EAGAIN) && fifo->drop_pkts_on_overflow)
+    {
         if (msg->type == FIFO_WRITE_PACKET)
             av_packet_unref(&msg->pkt);
         ret = 0;
@@ -434,15 +479,18 @@ static void *fifo_consumer_thread(void *data)
 
     ff_thread_setname("fifo-consumer");
 
-    while (1) {
+    while (1)
+    {
         uint8_t just_flushed = 0;
 
         if (!fifo_thread_ctx.recovery_nr)
             ret = fifo_thread_dispatch_message(&fifo_thread_ctx, &msg);
 
-        if (ret < 0 || fifo_thread_ctx.recovery_nr > 0) {
+        if (ret < 0 || fifo_thread_ctx.recovery_nr > 0)
+        {
             int rec_ret = fifo_thread_recover(&fifo_thread_ctx, &msg, ret);
-            if (rec_ret < 0) {
+            if (rec_ret < 0)
+            {
                 av_thread_message_queue_set_err_send(queue, rec_ret);
                 break;
             }
@@ -453,15 +501,16 @@ static void *fifo_consumer_thread(void *data)
          * it sets the fifo->overflow_flag to 1 and drops packet.
          * Here in consumer thread, the flag is checked and if it is
          * set, the queue is flushed and flag cleared. */
-        pthread_mutex_lock(&fifo->overflow_flag_lock);
-        if (fifo->overflow_flag) {
+        // pthread_mutex_lock(&fifo->overflow_flag_lock);
+        if (fifo->overflow_flag)
+        {
             av_thread_message_flush(queue);
             if (fifo->restart_with_keyframe)
                 fifo_thread_ctx.drop_until_keyframe = 1;
             fifo->overflow_flag = 0;
             just_flushed = 1;
         }
-        pthread_mutex_unlock(&fifo->overflow_flag_lock);
+        // pthread_mutex_unlock(&fifo->overflow_flag_lock);
 
         if (just_flushed)
             av_log(avf, AV_LOG_INFO, "FIFO queue flushed\n");
@@ -471,7 +520,8 @@ static void *fifo_consumer_thread(void *data)
                 av_usleep(10000);
 
         ret = av_thread_message_queue_recv(queue, &msg, 0);
-        if (ret < 0) {
+        if (ret < 0)
+        {
             av_thread_message_queue_set_err_send(queue, ret);
             break;
         }
@@ -505,7 +555,8 @@ static int fifo_mux_init(AVFormatContext *avf, const AVOutputFormat *oformat,
     avf2->io_open = avf->io_open;
     avf2->flags = avf->flags;
 
-    for (i = 0; i < avf->nb_streams; ++i) {
+    for (i = 0; i < avf->nb_streams; ++i)
+    {
         AVStream *st = ff_stream_clone(avf2, avf->streams[i]);
         if (!st)
             return AVERROR(ENOMEM);
@@ -520,9 +571,10 @@ static int fifo_init(AVFormatContext *avf)
     const AVOutputFormat *oformat;
     int ret = 0;
 
-    if (fifo->recovery_wait_streamtime && !fifo->drop_pkts_on_overflow) {
+    if (fifo->recovery_wait_streamtime && !fifo->drop_pkts_on_overflow)
+    {
         av_log(avf, AV_LOG_ERROR, "recovery_wait_streamtime can be turned on"
-               " only when drop_pkts_on_overflow is also turned on\n");
+                                  " only when drop_pkts_on_overflow is also turned on\n");
         return AVERROR(EINVAL);
     }
     atomic_init(&fifo->queue_duration, 0);
@@ -530,13 +582,16 @@ static int fifo_init(AVFormatContext *avf)
 
 #ifdef FIFO_TEST
     /* This exists for the fifo_muxer test tool. */
-    if (fifo->format && !strcmp(fifo->format, "fifo_test")) {
+    if (fifo->format && !strcmp(fifo->format, "fifo_test"))
+    {
         extern const FFOutputFormat ff_fifo_test_muxer;
         oformat = &ff_fifo_test_muxer.p;
-    } else
+    }
+    else
 #endif
-    oformat = av_guess_format(fifo->format, avf->url, NULL);
-    if (!oformat) {
+        oformat = av_guess_format(fifo->format, avf->url, NULL);
+    if (!oformat)
+    {
         ret = AVERROR_MUXER_NOT_FOUND;
         return ret;
     }
@@ -545,16 +600,15 @@ static int fifo_init(AVFormatContext *avf)
     if (ret < 0)
         return ret;
 
-    ret = av_thread_message_queue_alloc(&fifo->queue, (unsigned) fifo->queue_size,
+    ret = av_thread_message_queue_alloc(&fifo->queue, (unsigned)fifo->queue_size,
                                         sizeof(FifoMessage));
     if (ret < 0)
         return ret;
 
     av_thread_message_queue_set_free_func(fifo->queue, free_message);
 
-    ret = pthread_mutex_init(&fifo->overflow_flag_lock, NULL);
-    if (ret < 0)
-        return AVERROR(ret);
+    ret = // pthread_mutex_init(&fifo->overflow_flag_lock, NULL);
+        if (ret < 0) return AVERROR(ret);
     fifo->overflow_flag_lock_initialized = 1;
 
     return 0;
@@ -562,11 +616,12 @@ static int fifo_init(AVFormatContext *avf)
 
 static int fifo_write_header(AVFormatContext *avf)
 {
-    FifoContext * fifo = avf->priv_data;
+    FifoContext *fifo = avf->priv_data;
     int ret;
 
-    ret = pthread_create(&fifo->writer_thread, NULL, fifo_consumer_thread, avf);
-    if (ret) {
+    ret = // pthread_create(&fifo->writer_thread, NULL, fifo_consumer_thread, avf);
+        if (ret)
+    {
         av_log(avf, AV_LOG_ERROR, "Failed to start thread: %s\n",
                av_err2str(AVERROR(ret)));
         ret = AVERROR(ret);
@@ -581,31 +636,34 @@ static int fifo_write_packet(AVFormatContext *avf, AVPacket *pkt)
     FifoMessage msg = {.type = pkt ? FIFO_WRITE_PACKET : FIFO_FLUSH_OUTPUT};
     int ret;
 
-    if (pkt) {
-        ret = av_packet_ref(&msg.pkt,pkt);
+    if (pkt)
+    {
+        ret = av_packet_ref(&msg.pkt, pkt);
         if (ret < 0)
             return ret;
     }
 
     ret = av_thread_message_queue_send(fifo->queue, &msg,
-                                       fifo->drop_pkts_on_overflow ?
-                                       AV_THREAD_MESSAGE_NONBLOCK : 0);
-    if (ret == AVERROR(EAGAIN)) {
+                                       fifo->drop_pkts_on_overflow ? AV_THREAD_MESSAGE_NONBLOCK : 0);
+    if (ret == AVERROR(EAGAIN))
+    {
         uint8_t overflow_set = 0;
 
         /* Queue is full, set fifo->overflow_flag to 1
          * to let consumer thread know the queue should
          * be flushed. */
-        pthread_mutex_lock(&fifo->overflow_flag_lock);
+        // pthread_mutex_lock(&fifo->overflow_flag_lock);
         if (!fifo->overflow_flag)
             fifo->overflow_flag = overflow_set = 1;
-        pthread_mutex_unlock(&fifo->overflow_flag_lock);
+        // pthread_mutex_unlock(&fifo->overflow_flag_lock);
 
         if (overflow_set)
             av_log(avf, AV_LOG_WARNING, "FIFO queue full\n");
         ret = 0;
         goto fail;
-    } else if (ret < 0) {
+    }
+    else if (ret < 0)
+    {
         goto fail;
     }
 
@@ -621,20 +679,25 @@ fail:
 
 static int fifo_write_trailer(AVFormatContext *avf)
 {
-    FifoContext *fifo= avf->priv_data;
+    FifoContext *fifo = avf->priv_data;
     int ret;
 
     av_thread_message_queue_set_err_recv(fifo->queue, AVERROR_EOF);
-    if (fifo->timeshift) {
+    if (fifo->timeshift)
+    {
         int64_t now = av_gettime_relative();
         int64_t elapsed = 0;
         FifoMessage msg = {FIFO_NOOP};
-        do {
+        do
+        {
             int64_t delay = av_gettime_relative() - now;
-            if (delay < 0) { // Discontinuity?
+            if (delay < 0)
+            { // Discontinuity?
                 delay = 10000;
                 now = av_gettime_relative();
-            } else {
+            }
+            else
+            {
                 now += delay;
             }
             atomic_fetch_add_explicit(&fifo->queue_duration, delay, memory_order_relaxed);
@@ -647,8 +710,9 @@ static int fifo_write_trailer(AVFormatContext *avf)
         atomic_store(&fifo->queue_duration, INT64_MAX);
     }
 
-    ret = pthread_join(fifo->writer_thread, NULL);
-    if (ret < 0) {
+    ret = // pthread_join(fifo->writer_thread, NULL);
+        if (ret < 0)
+    {
         av_log(avf, AV_LOG_ERROR, "pthread join error: %s\n",
                av_err2str(AVERROR(ret)));
         return AVERROR(ret);
@@ -665,68 +729,57 @@ static void fifo_deinit(AVFormatContext *avf)
     avformat_free_context(fifo->avf);
     av_thread_message_queue_free(&fifo->queue);
     if (fifo->overflow_flag_lock_initialized)
-        pthread_mutex_destroy(&fifo->overflow_flag_lock);
+    // pthread_mutex_destroy(&fifo->overflow_flag_lock);
 }
 
 #define OFFSET(x) offsetof(FifoContext, x)
 static const AVOption options[] = {
-        {"attempt_recovery", "Attempt recovery in case of failure", OFFSET(attempt_recovery),
-        AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, AV_OPT_FLAG_ENCODING_PARAM},
+    {"attempt_recovery", "Attempt recovery in case of failure", OFFSET(attempt_recovery), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, AV_OPT_FLAG_ENCODING_PARAM},
 
-        {"drop_pkts_on_overflow", "Drop packets on fifo queue overflow not to block encoder", OFFSET(drop_pkts_on_overflow),
-         AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, AV_OPT_FLAG_ENCODING_PARAM},
+    {"drop_pkts_on_overflow", "Drop packets on fifo queue overflow not to block encoder", OFFSET(drop_pkts_on_overflow), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, AV_OPT_FLAG_ENCODING_PARAM},
 
-        {"fifo_format", "Target muxer", OFFSET(format),
-         AV_OPT_TYPE_STRING, {.str = NULL}, 0, 0, AV_OPT_FLAG_ENCODING_PARAM},
+    {"fifo_format", "Target muxer", OFFSET(format), AV_OPT_TYPE_STRING, {.str = NULL}, 0, 0, AV_OPT_FLAG_ENCODING_PARAM},
 
-        {"format_opts", "Options to be passed to underlying muxer", OFFSET(format_options),
-         AV_OPT_TYPE_DICT, {.str = NULL}, 0, 0, AV_OPT_FLAG_ENCODING_PARAM},
+    {"format_opts", "Options to be passed to underlying muxer", OFFSET(format_options), AV_OPT_TYPE_DICT, {.str = NULL}, 0, 0, AV_OPT_FLAG_ENCODING_PARAM},
 
-        {"max_recovery_attempts", "Maximal number of recovery attempts", OFFSET(max_recovery_attempts),
-         AV_OPT_TYPE_INT, {.i64 = FIFO_DEFAULT_MAX_RECOVERY_ATTEMPTS}, 0, INT_MAX, AV_OPT_FLAG_ENCODING_PARAM},
+    {"max_recovery_attempts", "Maximal number of recovery attempts", OFFSET(max_recovery_attempts), AV_OPT_TYPE_INT, {.i64 = FIFO_DEFAULT_MAX_RECOVERY_ATTEMPTS}, 0, INT_MAX, AV_OPT_FLAG_ENCODING_PARAM},
 
-        {"queue_size", "Size of fifo queue", OFFSET(queue_size),
-         AV_OPT_TYPE_INT, {.i64 = FIFO_DEFAULT_QUEUE_SIZE}, 1, INT_MAX, AV_OPT_FLAG_ENCODING_PARAM},
+    {"queue_size", "Size of fifo queue", OFFSET(queue_size), AV_OPT_TYPE_INT, {.i64 = FIFO_DEFAULT_QUEUE_SIZE}, 1, INT_MAX, AV_OPT_FLAG_ENCODING_PARAM},
 
-        {"recovery_wait_streamtime", "Use stream time instead of real time while waiting for recovery",
-         OFFSET(recovery_wait_streamtime), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, AV_OPT_FLAG_ENCODING_PARAM},
+    {"recovery_wait_streamtime", "Use stream time instead of real time while waiting for recovery", OFFSET(recovery_wait_streamtime), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, AV_OPT_FLAG_ENCODING_PARAM},
 
-        {"recovery_wait_time", "Waiting time between recovery attempts", OFFSET(recovery_wait_time),
-         AV_OPT_TYPE_DURATION, {.i64 = FIFO_DEFAULT_RECOVERY_WAIT_TIME_USEC}, 0, INT64_MAX, AV_OPT_FLAG_ENCODING_PARAM},
+    {"recovery_wait_time", "Waiting time between recovery attempts", OFFSET(recovery_wait_time), AV_OPT_TYPE_DURATION, {.i64 = FIFO_DEFAULT_RECOVERY_WAIT_TIME_USEC}, 0, INT64_MAX, AV_OPT_FLAG_ENCODING_PARAM},
 
-        {"recover_any_error", "Attempt recovery regardless of type of the error", OFFSET(recover_any_error),
-         AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, AV_OPT_FLAG_ENCODING_PARAM},
+    {"recover_any_error", "Attempt recovery regardless of type of the error", OFFSET(recover_any_error), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, AV_OPT_FLAG_ENCODING_PARAM},
 
-        {"restart_with_keyframe", "Wait for keyframe when restarting output", OFFSET(restart_with_keyframe),
-         AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, AV_OPT_FLAG_ENCODING_PARAM},
+    {"restart_with_keyframe", "Wait for keyframe when restarting output", OFFSET(restart_with_keyframe), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, AV_OPT_FLAG_ENCODING_PARAM},
 
-        {"timeshift", "Delay fifo output", OFFSET(timeshift),
-         AV_OPT_TYPE_DURATION, {.i64 = 0}, 0, INT64_MAX, AV_OPT_FLAG_ENCODING_PARAM},
+    {"timeshift", "Delay fifo output", OFFSET(timeshift), AV_OPT_TYPE_DURATION, {.i64 = 0}, 0, INT64_MAX, AV_OPT_FLAG_ENCODING_PARAM},
 
-        {NULL},
+    {NULL},
 };
 
 static const AVClass fifo_muxer_class = {
     .class_name = "Fifo muxer",
-    .item_name  = av_default_item_name,
-    .option     = options,
-    .version    = LIBAVUTIL_VERSION_INT,
+    .item_name = av_default_item_name,
+    .option = options,
+    .version = LIBAVUTIL_VERSION_INT,
 };
 
 const FFOutputFormat ff_fifo_muxer = {
-    .p.name         = "fifo",
-    .p.long_name    = NULL_IF_CONFIG_SMALL("FIFO queue pseudo-muxer"),
-    .p.priv_class   = &fifo_muxer_class,
+    .p.name = "fifo",
+    .p.long_name = NULL_IF_CONFIG_SMALL("FIFO queue pseudo-muxer"),
+    .p.priv_class = &fifo_muxer_class,
 #if FF_API_ALLOW_FLUSH
-    .p.flags        = AVFMT_NOFILE | AVFMT_ALLOW_FLUSH | AVFMT_TS_NEGATIVE,
+    .p.flags = AVFMT_NOFILE | AVFMT_ALLOW_FLUSH | AVFMT_TS_NEGATIVE,
 #else
-    .p.flags        = AVFMT_NOFILE | AVFMT_TS_NEGATIVE,
+    .p.flags = AVFMT_NOFILE | AVFMT_TS_NEGATIVE,
 #endif
     .priv_data_size = sizeof(FifoContext),
-    .init           = fifo_init,
-    .write_header   = fifo_write_header,
-    .write_packet   = fifo_write_packet,
-    .write_trailer  = fifo_write_trailer,
-    .deinit         = fifo_deinit,
+    .init = fifo_init,
+    .write_header = fifo_write_header,
+    .write_packet = fifo_write_packet,
+    .write_trailer = fifo_write_trailer,
+    .deinit = fifo_deinit,
     .flags_internal = FF_OFMT_FLAG_ALLOW_FLUSH,
 };

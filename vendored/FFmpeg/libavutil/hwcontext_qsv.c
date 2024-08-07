@@ -52,44 +52,50 @@
 #include "imgutils.h"
 #include "avassert.h"
 
-#define QSV_VERSION_ATLEAST(MAJOR, MINOR)   \
-    (MFX_VERSION_MAJOR > (MAJOR) ||         \
+#define QSV_VERSION_ATLEAST(MAJOR, MINOR) \
+    (MFX_VERSION_MAJOR > (MAJOR) ||       \
      MFX_VERSION_MAJOR == (MAJOR) && MFX_VERSION_MINOR >= (MINOR))
 
-#define QSV_RUNTIME_VERSION_ATLEAST(MFX_VERSION, MAJOR, MINOR)          \
-    ((MFX_VERSION.Major > (MAJOR)) ||                                   \
+#define QSV_RUNTIME_VERSION_ATLEAST(MFX_VERSION, MAJOR, MINOR) \
+    ((MFX_VERSION.Major > (MAJOR)) ||                          \
      (MFX_VERSION.Major == (MAJOR) && MFX_VERSION.Minor >= (MINOR)))
 
 #define MFX_IMPL_VIA_MASK(impl) (0x0f00 & (impl))
-#define QSV_ONEVPL       QSV_VERSION_ATLEAST(2, 0)
-#define QSV_HAVE_OPAQUE  !QSV_ONEVPL
+#define QSV_ONEVPL QSV_VERSION_ATLEAST(2, 0)
+#define QSV_HAVE_OPAQUE !QSV_ONEVPL
 
 #if QSV_ONEVPL
 #include <mfxdispatcher.h>
 #else
-#define MFXUnload(a) do { } while(0)
+#define MFXUnload(a) \
+    do               \
+    {                \
+    } while (0)
 #endif
 
-typedef struct QSVDevicePriv {
+typedef struct QSVDevicePriv
+{
     AVBufferRef *child_device_ctx;
 } QSVDevicePriv;
 
-typedef struct QSVDeviceContext {
+typedef struct QSVDeviceContext
+{
     /**
      * The public AVQSVDeviceContext. See hwcontext_qsv.h for it.
      */
     AVQSVDeviceContext p;
 
-    mfxHDL              handle;
-    mfxHandleType       handle_type;
-    mfxVersion          ver;
-    mfxIMPL             impl;
+    mfxHDL handle;
+    mfxHandleType handle_type;
+    mfxVersion ver;
+    mfxIMPL impl;
 
     enum AVHWDeviceType child_device_type;
-    enum AVPixelFormat  child_pix_fmt;
+    enum AVPixelFormat child_pix_fmt;
 } QSVDeviceContext;
 
-typedef struct QSVFramesContext {
+typedef struct QSVFramesContext
+{
     /**
      * The public AVQSVFramesContext. See hwcontext_qsv.h for it.
      */
@@ -100,13 +106,13 @@ typedef struct QSVFramesContext {
     mfxSession session_upload;
     atomic_int session_upload_init;
 #if HAVE_PTHREADS
-    pthread_mutex_t session_lock;
+    // pthread_mutex_t session_lock;
 #endif
 
     AVBufferRef *child_frames_ref;
     mfxFrameSurface1 *surfaces_internal;
     mfxHDLPair *handle_pairs_internal;
-    int             nb_surfaces_used;
+    int nb_surfaces_used;
 
     // used in the frame allocator for non-opaque surfaces
     mfxMemId *mem_ids;
@@ -123,49 +129,51 @@ typedef struct QSVFramesContext {
     mfxFrameInfo frame_info;
 } QSVFramesContext;
 
-typedef struct QSVSurface {
+typedef struct QSVSurface
+{
     mfxFrameSurface1 mfx_surface;
     AVFrame *child_frame;
 } QSVSurface;
 
-static const struct {
+static const struct
+{
     enum AVPixelFormat pix_fmt;
-    uint32_t           fourcc;
-    uint16_t           mfx_shift;
+    uint32_t fourcc;
+    uint16_t mfx_shift;
 } supported_pixel_formats[] = {
-    { AV_PIX_FMT_NV12, MFX_FOURCC_NV12, 0 },
-    { AV_PIX_FMT_BGRA, MFX_FOURCC_RGB4, 0 },
-    { AV_PIX_FMT_P010, MFX_FOURCC_P010, 1 },
-    { AV_PIX_FMT_PAL8, MFX_FOURCC_P8,   0 },
-    { AV_PIX_FMT_YUYV422,
-                       MFX_FOURCC_YUY2, 0 },
+    {AV_PIX_FMT_NV12, MFX_FOURCC_NV12, 0},
+    {AV_PIX_FMT_BGRA, MFX_FOURCC_RGB4, 0},
+    {AV_PIX_FMT_P010, MFX_FOURCC_P010, 1},
+    {AV_PIX_FMT_PAL8, MFX_FOURCC_P8, 0},
+    {AV_PIX_FMT_YUYV422,
+     MFX_FOURCC_YUY2, 0},
 #if CONFIG_VAAPI
-    { AV_PIX_FMT_UYVY422,
-                       MFX_FOURCC_UYVY, 0 },
+    {AV_PIX_FMT_UYVY422,
+     MFX_FOURCC_UYVY, 0},
 #endif
-    { AV_PIX_FMT_Y210,
-                       MFX_FOURCC_Y210, 1 },
+    {AV_PIX_FMT_Y210,
+     MFX_FOURCC_Y210, 1},
     // VUYX is used for VAAPI child device,
     // the SDK only delares support for AYUV
-    { AV_PIX_FMT_VUYX,
-                       MFX_FOURCC_AYUV, 0 },
+    {AV_PIX_FMT_VUYX,
+     MFX_FOURCC_AYUV, 0},
     // XV30 is used for VAAPI child device,
     // the SDK only delares support for Y410
-    { AV_PIX_FMT_XV30,
-                       MFX_FOURCC_Y410, 0 },
+    {AV_PIX_FMT_XV30,
+     MFX_FOURCC_Y410, 0},
 #if QSV_VERSION_ATLEAST(1, 31)
     // P012 is used for VAAPI child device,
     // the SDK only delares support for P016
-    { AV_PIX_FMT_P012,
-                       MFX_FOURCC_P016, 1 },
+    {AV_PIX_FMT_P012,
+     MFX_FOURCC_P016, 1},
     // Y212 is used for VAAPI child device,
     // the SDK only delares support for Y216
-    { AV_PIX_FMT_Y212,
-                       MFX_FOURCC_Y216, 1 },
+    {AV_PIX_FMT_Y212,
+     MFX_FOURCC_Y216, 1},
     // XV36 is used for VAAPI child device,
     // the SDK only delares support for Y416
-    { AV_PIX_FMT_XV36,
-                       MFX_FOURCC_Y416, 1 },
+    {AV_PIX_FMT_XV36,
+     MFX_FOURCC_Y416, 1},
 #endif
 };
 
@@ -184,7 +192,8 @@ int ff_qsv_get_surface_base_handle(mfxFrameSurface1 *surf,
 {
     mfxHDLPair *handle_pair;
     handle_pair = surf->Data.MemId;
-    switch (base_dev_type) {
+    switch (base_dev_type)
+    {
 #if CONFIG_VAAPI
     case AV_HWDEVICE_TYPE_VAAPI:
         base_handle[0] = handle_pair->first;
@@ -208,7 +217,8 @@ int ff_qsv_get_surface_base_handle(mfxFrameSurface1 *surf,
 static uint32_t qsv_fourcc_from_pix_fmt(enum AVPixelFormat pix_fmt)
 {
     int i;
-    for (i = 0; i < FF_ARRAY_ELEMS(supported_pixel_formats); i++) {
+    for (i = 0; i < FF_ARRAY_ELEMS(supported_pixel_formats); i++)
+    {
         if (supported_pixel_formats[i].pix_fmt == pix_fmt)
             return supported_pixel_formats[i].fourcc;
     }
@@ -217,7 +227,8 @@ static uint32_t qsv_fourcc_from_pix_fmt(enum AVPixelFormat pix_fmt)
 
 static uint16_t qsv_shift_from_pix_fmt(enum AVPixelFormat pix_fmt)
 {
-    for (int i = 0; i < FF_ARRAY_ELEMS(supported_pixel_formats); i++) {
+    for (int i = 0; i < FF_ARRAY_ELEMS(supported_pixel_formats); i++)
+    {
         if (supported_pixel_formats[i].pix_fmt == pix_fmt)
             return supported_pixel_formats[i].mfx_shift;
     }
@@ -254,7 +265,8 @@ static int qsv_fill_border(AVFrame *dst, const AVFrame *src)
     for (i = 0; i < desc->nb_components; i++)
         planes_nb = FFMAX(planes_nb, desc->comp[i].plane + 1);
 
-    for (i = 0; i < planes_nb; i++) {
+    for (i = 0; i < planes_nb; i++)
+    {
         int sheight, dheight, y;
         ptrdiff_t swidth = av_image_get_linesize(src->format,
                                                  src->width,
@@ -263,27 +275,31 @@ static int qsv_fill_border(AVFrame *dst, const AVFrame *src)
                                                  dst->width,
                                                  i);
         const AVComponentDescriptor comp = desc->comp[i];
-        if (swidth < 0 || dwidth < 0) {
+        if (swidth < 0 || dwidth < 0)
+        {
             av_log(NULL, AV_LOG_ERROR, "av_image_get_linesize failed\n");
             return AVERROR(EINVAL);
         }
         sheight = src->height;
         dheight = dst->height;
-        if (i) {
+        if (i)
+        {
             sheight = AV_CEIL_RSHIFT(src->height, desc->log2_chroma_h);
             dheight = AV_CEIL_RSHIFT(dst->height, desc->log2_chroma_h);
         }
-        //fill right padding
-        for (y = 0; y < sheight; y++) {
-            void *line_ptr = dst->data[i] + y*dst->linesize[i] + swidth;
+        // fill right padding
+        for (y = 0; y < sheight; y++)
+        {
+            void *line_ptr = dst->data[i] + y * dst->linesize[i] + swidth;
             av_memcpy_backptr(line_ptr,
-                           comp.depth > 8 ? 2 : 1,
-                           dwidth - swidth);
+                              comp.depth > 8 ? 2 : 1,
+                              dwidth - swidth);
         }
-        //fill bottom padding
-        for (y = sheight; y < dheight; y++) {
-            memcpy(dst->data[i]+y*dst->linesize[i],
-                   dst->data[i]+(sheight-1)*dst->linesize[i],
+        // fill bottom padding
+        for (y = sheight; y < dheight; y++)
+        {
+            memcpy(dst->data[i] + y * dst->linesize[i],
+                   dst->data[i] + (sheight - 1) * dst->linesize[i],
                    dwidth);
         }
     }
@@ -292,37 +308,43 @@ static int qsv_fill_border(AVFrame *dst, const AVFrame *src)
 
 static int qsv_device_init(AVHWDeviceContext *ctx)
 {
-    QSVDeviceContext       *s = ctx->hwctx;
+    QSVDeviceContext *s = ctx->hwctx;
     AVQSVDeviceContext *hwctx = &s->p;
-    int   hw_handle_supported = 0;
+    int hw_handle_supported = 0;
     mfxHandleType handle_type;
     enum AVHWDeviceType device_type;
-    enum AVPixelFormat  pix_fmt;
+    enum AVPixelFormat pix_fmt;
     mfxStatus err;
 
     err = MFXQueryIMPL(hwctx->session, &s->impl);
     if (err == MFX_ERR_NONE)
         err = MFXQueryVersion(hwctx->session, &s->ver);
-    if (err != MFX_ERR_NONE) {
+    if (err != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error querying the session attributes\n");
         return AVERROR_UNKNOWN;
     }
 
-    if (MFX_IMPL_VIA_VAAPI == MFX_IMPL_VIA_MASK(s->impl)) {
+    if (MFX_IMPL_VIA_VAAPI == MFX_IMPL_VIA_MASK(s->impl))
+    {
 #if CONFIG_VAAPI
         handle_type = MFX_HANDLE_VA_DISPLAY;
         device_type = AV_HWDEVICE_TYPE_VAAPI;
         pix_fmt = AV_PIX_FMT_VAAPI;
         hw_handle_supported = 1;
 #endif
-    } else if (MFX_IMPL_VIA_D3D11 == MFX_IMPL_VIA_MASK(s->impl)) {
+    }
+    else if (MFX_IMPL_VIA_D3D11 == MFX_IMPL_VIA_MASK(s->impl))
+    {
 #if CONFIG_D3D11VA
         handle_type = MFX_HANDLE_D3D11_DEVICE;
         device_type = AV_HWDEVICE_TYPE_D3D11VA;
         pix_fmt = AV_PIX_FMT_D3D11;
         hw_handle_supported = 1;
 #endif
-    } else if (MFX_IMPL_VIA_D3D9 == MFX_IMPL_VIA_MASK(s->impl)) {
+    }
+    else if (MFX_IMPL_VIA_D3D9 == MFX_IMPL_VIA_MASK(s->impl))
+    {
 #if CONFIG_DXVA2
         handle_type = MFX_HANDLE_D3D9_DEVICE_MANAGER;
         device_type = AV_HWDEVICE_TYPE_DXVA2;
@@ -331,17 +353,20 @@ static int qsv_device_init(AVHWDeviceContext *ctx)
 #endif
     }
 
-    if (hw_handle_supported) {
+    if (hw_handle_supported)
+    {
         err = MFXVideoCORE_GetHandle(hwctx->session, handle_type, &s->handle);
-        if (err == MFX_ERR_NONE) {
-            s->handle_type       = handle_type;
+        if (err == MFX_ERR_NONE)
+        {
+            s->handle_type = handle_type;
             s->child_device_type = device_type;
-            s->child_pix_fmt     = pix_fmt;
+            s->child_pix_fmt = pix_fmt;
         }
     }
-    if (!s->handle) {
+    if (!s->handle)
+    {
         av_log(ctx, AV_LOG_VERBOSE, "No supported hw handle could be retrieved "
-               "from the session\n");
+                                    "from the session\n");
     }
     return 0;
 }
@@ -350,14 +375,16 @@ static void qsv_frames_uninit(AVHWFramesContext *ctx)
 {
     QSVFramesContext *s = ctx->hwctx;
 
-    if (s->session_download) {
+    if (s->session_download)
+    {
         MFXVideoVPP_Close(s->session_download);
         MFXClose(s->session_download);
     }
     s->session_download = NULL;
     s->session_download_init = 0;
 
-    if (s->session_upload) {
+    if (s->session_upload)
+    {
         MFXVideoVPP_Close(s->session_upload);
         MFXClose(s->session_upload);
     }
@@ -365,7 +392,7 @@ static void qsv_frames_uninit(AVHWFramesContext *ctx)
     s->session_upload_init = 0;
 
 #if HAVE_PTHREADS
-    pthread_mutex_destroy(&s->session_lock);
+    // pthread_mutex_destroy(&s->session_lock);
 #endif
 
     av_freep(&s->mem_ids);
@@ -385,7 +412,7 @@ static void qsv_pool_release_dummy(void *opaque, uint8_t *data)
 
 static void qsv_pool_release(void *opaque, uint8_t *data)
 {
-    AVHWFramesContext *ctx = (AVHWFramesContext*)opaque;
+    AVHWFramesContext *ctx = (AVHWFramesContext *)opaque;
     QSVFramesContext *s = ctx->hwctx;
     QSVSurface *qsv_surface = (QSVSurface *)data;
     mfxHDLPair *hdl_pair = (mfxHDLPair *)qsv_surface->mfx_surface.Data.MemId;
@@ -394,7 +421,7 @@ static void qsv_pool_release(void *opaque, uint8_t *data)
     if (!s->child_frames_ref)
         return;
 
-    child_frames_ctx = (AVHWFramesContext*)s->child_frames_ref->data;
+    child_frames_ctx = (AVHWFramesContext *)s->child_frames_ref->data;
     if (!child_frames_ctx->device_ctx)
         return;
 
@@ -410,13 +437,14 @@ static void qsv_pool_release(void *opaque, uint8_t *data)
 
 static AVBufferRef *qsv_fixed_pool_alloc(void *opaque, size_t size)
 {
-    AVHWFramesContext    *ctx = (AVHWFramesContext*)opaque;
-    QSVFramesContext       *s = ctx->hwctx;
+    AVHWFramesContext *ctx = (AVHWFramesContext *)opaque;
+    QSVFramesContext *s = ctx->hwctx;
     AVQSVFramesContext *hwctx = &s->p;
 
-    if (s->nb_surfaces_used < hwctx->nb_surfaces) {
+    if (s->nb_surfaces_used < hwctx->nb_surfaces)
+    {
         s->nb_surfaces_used++;
-        return av_buffer_create((uint8_t*)(s->surfaces_internal + s->nb_surfaces_used - 1),
+        return av_buffer_create((uint8_t *)(s->surfaces_internal + s->nb_surfaces_used - 1),
                                 sizeof(*hwctx->surfaces), qsv_pool_release_dummy, NULL, 0);
     }
 
@@ -425,8 +453,8 @@ static AVBufferRef *qsv_fixed_pool_alloc(void *opaque, size_t size)
 
 static AVBufferRef *qsv_dynamic_pool_alloc(void *opaque, size_t size)
 {
-    AVHWFramesContext    *ctx = (AVHWFramesContext*)opaque;
-    QSVFramesContext       *s = ctx->hwctx;
+    AVHWFramesContext *ctx = (AVHWFramesContext *)opaque;
+    QSVFramesContext *s = ctx->hwctx;
     AVHWFramesContext *child_frames_ctx;
     QSVSurface *qsv_surface = NULL;
     mfxHDLPair *handle_pairs_internal = NULL;
@@ -435,12 +463,13 @@ static AVBufferRef *qsv_dynamic_pool_alloc(void *opaque, size_t size)
     if (!s->child_frames_ref)
         goto fail;
 
-    child_frames_ctx = (AVHWFramesContext*)s->child_frames_ref->data;
+    child_frames_ctx = (AVHWFramesContext *)s->child_frames_ref->data;
     if (!child_frames_ctx->device_ctx)
         goto fail;
 
 #if CONFIG_DXVA2
-    if (child_frames_ctx->device_ctx->type == AV_HWDEVICE_TYPE_DXVA2) {
+    if (child_frames_ctx->device_ctx->type == AV_HWDEVICE_TYPE_DXVA2)
+    {
         av_log(ctx, AV_LOG_ERROR,
                "QSV on dxva2 requires a fixed frame pool size\n");
         goto fail;
@@ -468,7 +497,8 @@ static AVBufferRef *qsv_dynamic_pool_alloc(void *opaque, size_t size)
         goto fail;
 
 #if CONFIG_VAAPI
-    if (child_frames_ctx->device_ctx->type == AV_HWDEVICE_TYPE_VAAPI) {
+    if (child_frames_ctx->device_ctx->type == AV_HWDEVICE_TYPE_VAAPI)
+    {
         VASurfaceID *surface_id_internal;
 
         surface_id_internal = av_calloc(1, sizeof(*surface_id_internal));
@@ -482,7 +512,8 @@ static AVBufferRef *qsv_dynamic_pool_alloc(void *opaque, size_t size)
 #endif
 
 #if CONFIG_D3D11VA
-    if (child_frames_ctx->device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA) {
+    if (child_frames_ctx->device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA)
+    {
         AVD3D11VAFramesContext *child_frames_hwctx = child_frames_ctx->hwctx;
         handle_pairs_internal->first = (mfxMemId)qsv_surface->child_frame->data[0];
 
@@ -490,7 +521,6 @@ static AVBufferRef *qsv_dynamic_pool_alloc(void *opaque, size_t size)
             handle_pairs_internal->second = (mfxMemId)MFX_INFINITE;
         else
             handle_pairs_internal->second = (mfxMemId)qsv_surface->child_frame->data[1];
-
     }
 #endif
 
@@ -499,7 +529,8 @@ static AVBufferRef *qsv_dynamic_pool_alloc(void *opaque, size_t size)
                             qsv_pool_release, ctx, 0);
 
 fail:
-    if (qsv_surface) {
+    if (qsv_surface)
+    {
         av_frame_free(&qsv_surface->child_frame);
     }
 
@@ -511,12 +542,15 @@ fail:
 
 static AVBufferRef *qsv_pool_alloc(void *opaque, size_t size)
 {
-    AVHWFramesContext    *ctx = (AVHWFramesContext*)opaque;
+    AVHWFramesContext *ctx = (AVHWFramesContext *)opaque;
     AVQSVFramesContext *hwctx = ctx->hwctx;
 
-    if (hwctx->nb_surfaces == 0) {
+    if (hwctx->nb_surfaces == 0)
+    {
         return qsv_dynamic_pool_alloc(opaque, size);
-    } else {
+    }
+    else
+    {
         return qsv_fixed_pool_alloc(opaque, size);
     }
 }
@@ -524,8 +558,8 @@ static AVBufferRef *qsv_pool_alloc(void *opaque, size_t size)
 static int qsv_init_child_ctx(AVHWFramesContext *ctx)
 {
     QSVDeviceContext *device_priv = ctx->device_ctx->hwctx;
-    QSVFramesContext           *s = ctx->hwctx;
-    AVQSVFramesContext     *hwctx = &s->p;
+    QSVFramesContext *s = ctx->hwctx;
+    AVQSVFramesContext *hwctx = &s->p;
 
     AVBufferRef *child_device_ref = NULL;
     AVBufferRef *child_frames_ref = NULL;
@@ -535,7 +569,8 @@ static int qsv_init_child_ctx(AVHWFramesContext *ctx)
 
     int i, ret = 0;
 
-    if (!device_priv->handle) {
+    if (!device_priv->handle)
+    {
         av_log(ctx, AV_LOG_ERROR,
                "Cannot create a non-opaque internal surface pool without "
                "a hardware handle\n");
@@ -545,49 +580,55 @@ static int qsv_init_child_ctx(AVHWFramesContext *ctx)
     child_device_ref = av_hwdevice_ctx_alloc(device_priv->child_device_type);
     if (!child_device_ref)
         return AVERROR(ENOMEM);
-    child_device_ctx   = (AVHWDeviceContext*)child_device_ref->data;
+    child_device_ctx = (AVHWDeviceContext *)child_device_ref->data;
 
 #if CONFIG_VAAPI
-    if (child_device_ctx->type == AV_HWDEVICE_TYPE_VAAPI) {
+    if (child_device_ctx->type == AV_HWDEVICE_TYPE_VAAPI)
+    {
         AVVAAPIDeviceContext *child_device_hwctx = child_device_ctx->hwctx;
         child_device_hwctx->display = (VADisplay)device_priv->handle;
     }
 #endif
 #if CONFIG_D3D11VA
-    if (child_device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA) {
+    if (child_device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA)
+    {
         AVD3D11VADeviceContext *child_device_hwctx = child_device_ctx->hwctx;
-        ID3D11Device_AddRef((ID3D11Device*)device_priv->handle);
-        child_device_hwctx->device = (ID3D11Device*)device_priv->handle;
+        ID3D11Device_AddRef((ID3D11Device *)device_priv->handle);
+        child_device_hwctx->device = (ID3D11Device *)device_priv->handle;
     }
 #endif
 #if CONFIG_DXVA2
-    if (child_device_ctx->type == AV_HWDEVICE_TYPE_DXVA2) {
+    if (child_device_ctx->type == AV_HWDEVICE_TYPE_DXVA2)
+    {
         AVDXVA2DeviceContext *child_device_hwctx = child_device_ctx->hwctx;
-        child_device_hwctx->devmgr = (IDirect3DDeviceManager9*)device_priv->handle;
+        child_device_hwctx->devmgr = (IDirect3DDeviceManager9 *)device_priv->handle;
     }
 #endif
 
     ret = av_hwdevice_ctx_init(child_device_ref);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error initializing a child device context\n");
         goto fail;
     }
 
     child_frames_ref = av_hwframe_ctx_alloc(child_device_ref);
-    if (!child_frames_ref) {
+    if (!child_frames_ref)
+    {
         ret = AVERROR(ENOMEM);
         goto fail;
     }
-    child_frames_ctx = (AVHWFramesContext*)child_frames_ref->data;
+    child_frames_ctx = (AVHWFramesContext *)child_frames_ref->data;
 
-    child_frames_ctx->format            = device_priv->child_pix_fmt;
-    child_frames_ctx->sw_format         = ctx->sw_format;
+    child_frames_ctx->format = device_priv->child_pix_fmt;
+    child_frames_ctx->sw_format = ctx->sw_format;
     child_frames_ctx->initial_pool_size = ctx->initial_pool_size;
-    child_frames_ctx->width             = FFALIGN(ctx->width, 16);
-    child_frames_ctx->height            = FFALIGN(ctx->height, 16);
+    child_frames_ctx->width = FFALIGN(ctx->width, 16);
+    child_frames_ctx->height = FFALIGN(ctx->height, 16);
 
 #if CONFIG_D3D11VA
-    if (child_device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA) {
+    if (child_device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA)
+    {
         AVD3D11VAFramesContext *child_frames_hwctx = child_frames_ctx->hwctx;
         if (hwctx->frame_type == 0)
             hwctx->frame_type = MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET;
@@ -597,7 +638,8 @@ static int qsv_init_child_ctx(AVHWFramesContext *ctx)
     }
 #endif
 #if CONFIG_DXVA2
-    if (child_device_ctx->type == AV_HWDEVICE_TYPE_DXVA2) {
+    if (child_device_ctx->type == AV_HWDEVICE_TYPE_DXVA2)
+    {
         AVDXVA2FramesContext *child_frames_hwctx = child_frames_ctx->hwctx;
         if (hwctx->frame_type & MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET)
             child_frames_hwctx->surface_type = DXVA2_VideoProcessorRenderTarget;
@@ -607,15 +649,18 @@ static int qsv_init_child_ctx(AVHWFramesContext *ctx)
 #endif
 
     ret = av_hwframe_ctx_init(child_frames_ref);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error initializing a child frames context\n");
         goto fail;
     }
 
 #if CONFIG_VAAPI
-    if (child_device_ctx->type == AV_HWDEVICE_TYPE_VAAPI) {
+    if (child_device_ctx->type == AV_HWDEVICE_TYPE_VAAPI)
+    {
         AVVAAPIFramesContext *child_frames_hwctx = child_frames_ctx->hwctx;
-        for (i = 0; i < ctx->initial_pool_size; i++) {
+        for (i = 0; i < ctx->initial_pool_size; i++)
+        {
             s->handle_pairs_internal[i].first = child_frames_hwctx->surface_ids + i;
             s->handle_pairs_internal[i].second = (mfxMemId)MFX_INFINITE;
             s->surfaces_internal[i].Data.MemId = (mfxMemId)&s->handle_pairs_internal[i];
@@ -624,28 +669,38 @@ static int qsv_init_child_ctx(AVHWFramesContext *ctx)
     }
 #endif
 #if CONFIG_D3D11VA
-    if (child_device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA) {
+    if (child_device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA)
+    {
         AVD3D11VAFramesContext *child_frames_hwctx = child_frames_ctx->hwctx;
-        for (i = 0; i < ctx->initial_pool_size; i++) {
+        for (i = 0; i < ctx->initial_pool_size; i++)
+        {
             s->handle_pairs_internal[i].first = (mfxMemId)child_frames_hwctx->texture_infos[i].texture;
-            if(child_frames_hwctx->BindFlags & D3D11_BIND_RENDER_TARGET) {
+            if (child_frames_hwctx->BindFlags & D3D11_BIND_RENDER_TARGET)
+            {
                 s->handle_pairs_internal[i].second = (mfxMemId)MFX_INFINITE;
-            } else {
+            }
+            else
+            {
                 s->handle_pairs_internal[i].second = (mfxMemId)child_frames_hwctx->texture_infos[i].index;
             }
             s->surfaces_internal[i].Data.MemId = (mfxMemId)&s->handle_pairs_internal[i];
         }
-        if (child_frames_hwctx->BindFlags & D3D11_BIND_RENDER_TARGET) {
+        if (child_frames_hwctx->BindFlags & D3D11_BIND_RENDER_TARGET)
+        {
             hwctx->frame_type |= MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET;
-        } else {
+        }
+        else
+        {
             hwctx->frame_type |= MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET;
         }
     }
 #endif
 #if CONFIG_DXVA2
-    if (child_device_ctx->type == AV_HWDEVICE_TYPE_DXVA2) {
+    if (child_device_ctx->type == AV_HWDEVICE_TYPE_DXVA2)
+    {
         AVDXVA2FramesContext *child_frames_hwctx = child_frames_ctx->hwctx;
-        for (i = 0; i < ctx->initial_pool_size; i++) {
+        for (i = 0; i < ctx->initial_pool_size; i++)
+        {
             s->handle_pairs_internal[i].first = (mfxMemId)child_frames_hwctx->surfaces[i];
             s->handle_pairs_internal[i].second = (mfxMemId)MFX_INFINITE;
             s->surfaces_internal[i].Data.MemId = (mfxMemId)&s->handle_pairs_internal[i];
@@ -657,8 +712,8 @@ static int qsv_init_child_ctx(AVHWFramesContext *ctx)
     }
 #endif
 
-    s->child_frames_ref       = child_frames_ref;
-    child_frames_ref          = NULL;
+    s->child_frames_ref = child_frames_ref;
+    child_frames_ref = NULL;
 
 fail:
     av_buffer_unref(&child_device_ref);
@@ -679,40 +734,43 @@ static int qsv_init_surface(AVHWFramesContext *ctx, mfxFrameSurface1 *surf)
     if (!fourcc)
         return AVERROR(EINVAL);
 
-    surf->Info.BitDepthLuma   = desc->comp[0].depth;
+    surf->Info.BitDepthLuma = desc->comp[0].depth;
     surf->Info.BitDepthChroma = desc->comp[0].depth;
-    surf->Info.Shift          = qsv_shift_from_pix_fmt(ctx->sw_format);
+    surf->Info.Shift = qsv_shift_from_pix_fmt(ctx->sw_format);
 
     if (desc->log2_chroma_w && desc->log2_chroma_h)
-        surf->Info.ChromaFormat   = MFX_CHROMAFORMAT_YUV420;
+        surf->Info.ChromaFormat = MFX_CHROMAFORMAT_YUV420;
     else if (desc->log2_chroma_w)
-        surf->Info.ChromaFormat   = MFX_CHROMAFORMAT_YUV422;
+        surf->Info.ChromaFormat = MFX_CHROMAFORMAT_YUV422;
     else
-        surf->Info.ChromaFormat   = MFX_CHROMAFORMAT_YUV444;
+        surf->Info.ChromaFormat = MFX_CHROMAFORMAT_YUV444;
 
-    surf->Info.FourCC         = fourcc;
-    surf->Info.Width          = FFALIGN(ctx->width, 16);
-    surf->Info.CropW          = ctx->width;
-    surf->Info.Height         = FFALIGN(ctx->height, 16);
-    surf->Info.CropH          = ctx->height;
-    surf->Info.FrameRateExtN  = 25;
-    surf->Info.FrameRateExtD  = 1;
-    surf->Info.PicStruct      = MFX_PICSTRUCT_PROGRESSIVE;
+    surf->Info.FourCC = fourcc;
+    surf->Info.Width = FFALIGN(ctx->width, 16);
+    surf->Info.CropW = ctx->width;
+    surf->Info.Height = FFALIGN(ctx->height, 16);
+    surf->Info.CropH = ctx->height;
+    surf->Info.FrameRateExtN = 25;
+    surf->Info.FrameRateExtD = 1;
+    surf->Info.PicStruct = MFX_PICSTRUCT_PROGRESSIVE;
 
     return 0;
 }
 
 static int qsv_init_pool(AVHWFramesContext *ctx, uint32_t fourcc)
 {
-    QSVFramesContext              *s = ctx->hwctx;
+    QSVFramesContext *s = ctx->hwctx;
     AVQSVFramesContext *frames_hwctx = &s->p;
 
     int i, ret = 0;
 
-    if (ctx->initial_pool_size < 0) {
+    if (ctx->initial_pool_size < 0)
+    {
         av_log(ctx, AV_LOG_ERROR, "Invalid frame pool size\n");
         return AVERROR(EINVAL);
-    } else if (ctx->initial_pool_size == 0) {
+    }
+    else if (ctx->initial_pool_size == 0)
+    {
         mfxFrameSurface1 mfx_surf1;
 
         ret = qsv_init_child_ctx(ctx);
@@ -743,14 +801,16 @@ static int qsv_init_pool(AVHWFramesContext *ctx, uint32_t fourcc)
     if (!s->surfaces_internal)
         return AVERROR(ENOMEM);
 
-    for (i = 0; i < ctx->initial_pool_size; i++) {
+    for (i = 0; i < ctx->initial_pool_size; i++)
+    {
         ret = qsv_init_surface(ctx, &s->surfaces_internal[i]);
         if (ret < 0)
             return ret;
     }
 
 #if QSV_HAVE_OPAQUE
-    if (!(frames_hwctx->frame_type & MFX_MEMTYPE_OPAQUE_FRAME)) {
+    if (!(frames_hwctx->frame_type & MFX_MEMTYPE_OPAQUE_FRAME))
+    {
         ret = qsv_init_child_ctx(ctx);
         if (ret < 0)
             return ret;
@@ -766,7 +826,7 @@ static int qsv_init_pool(AVHWFramesContext *ctx, uint32_t fourcc)
     if (!ffhwframesctx(ctx)->pool_internal)
         return AVERROR(ENOMEM);
 
-    frames_hwctx->surfaces    = s->surfaces_internal;
+    frames_hwctx->surfaces = s->surfaces_internal;
     frames_hwctx->nb_surfaces = ctx->initial_pool_size;
 
     return 0;
@@ -775,26 +835,27 @@ static int qsv_init_pool(AVHWFramesContext *ctx, uint32_t fourcc)
 static mfxStatus frame_alloc(mfxHDL pthis, mfxFrameAllocRequest *req,
                              mfxFrameAllocResponse *resp)
 {
-    AVHWFramesContext    *ctx = pthis;
-    QSVFramesContext       *s = ctx->hwctx;
+    AVHWFramesContext *ctx = pthis;
+    QSVFramesContext *s = ctx->hwctx;
     AVQSVFramesContext *hwctx = &s->p;
-    mfxFrameInfo *i  = &req->Info;
+    mfxFrameInfo *i = &req->Info;
     mfxFrameInfo *i1 = hwctx->nb_surfaces ? &hwctx->surfaces[0].Info : hwctx->info;
 
     if (!(req->Type & MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET) ||
         !(req->Type & (MFX_MEMTYPE_FROM_VPPIN | MFX_MEMTYPE_FROM_VPPOUT)) ||
         !(req->Type & MFX_MEMTYPE_EXTERNAL_FRAME))
         return MFX_ERR_UNSUPPORTED;
-    if (i->Width  > i1->Width || i->Height > i1->Height ||
-        i->FourCC != i1->FourCC || i->ChromaFormat != i1->ChromaFormat) {
+    if (i->Width > i1->Width || i->Height > i1->Height ||
+        i->FourCC != i1->FourCC || i->ChromaFormat != i1->ChromaFormat)
+    {
         av_log(ctx, AV_LOG_ERROR, "Mismatching surface properties in an "
-               "allocation request: %dx%d %d %d vs %dx%d %d %d\n",
-               i->Width,  i->Height,  i->FourCC,  i->ChromaFormat,
+                                  "allocation request: %dx%d %d %d vs %dx%d %d %d\n",
+               i->Width, i->Height, i->FourCC, i->ChromaFormat,
                i1->Width, i1->Height, i1->FourCC, i1->ChromaFormat);
         return MFX_ERR_UNSUPPORTED;
     }
 
-    resp->mids           = s->mem_ids;
+    resp->mids = s->mem_ids;
     resp->NumFrameActual = hwctx->nb_surfaces;
 
     return MFX_ERR_NONE;
@@ -817,8 +878,8 @@ static mfxStatus frame_unlock(mfxHDL pthis, mfxMemId mid, mfxFrameData *ptr)
 
 static mfxStatus frame_get_hdl(mfxHDL pthis, mfxMemId mid, mfxHDL *hdl)
 {
-    mfxHDLPair *pair_dst = (mfxHDLPair*)hdl;
-    mfxHDLPair *pair_src = (mfxHDLPair*)mid;
+    mfxHDLPair *pair_dst = (mfxHDLPair *)hdl;
+    mfxHDLPair *pair_src = (mfxHDLPair *)mid;
 
     pair_dst->first = pair_src->first;
 
@@ -841,21 +902,26 @@ static int qsv_d3d11_update_config(void *ctx, mfxHDL handle, mfxConfig cfg)
     ID3D11Device *device = handle;
     mfxVariant impl_value = {0};
 
-    hr = ID3D11Device_QueryInterface(device, &IID_IDXGIDevice, (void**)&pDXGIDevice);
-    if (SUCCEEDED(hr)) {
+    hr = ID3D11Device_QueryInterface(device, &IID_IDXGIDevice, (void **)&pDXGIDevice);
+    if (SUCCEEDED(hr))
+    {
         hr = IDXGIDevice_GetAdapter(pDXGIDevice, &pDXGIAdapter);
-        if (FAILED(hr)) {
+        if (FAILED(hr))
+        {
             av_log(ctx, AV_LOG_ERROR, "Error IDXGIDevice_GetAdapter %d\n", hr);
             IDXGIDevice_Release(pDXGIDevice);
             return ret;
         }
 
         hr = IDXGIAdapter_GetDesc(pDXGIAdapter, &adapterDesc);
-        if (FAILED(hr)) {
+        if (FAILED(hr))
+        {
             av_log(ctx, AV_LOG_ERROR, "Error IDXGIAdapter_GetDesc %d\n", hr);
             goto fail;
         }
-    } else {
+    }
+    else
+    {
         av_log(ctx, AV_LOG_ERROR, "Error ID3D11Device_QueryInterface %d\n", hr);
         return ret;
     }
@@ -864,9 +930,11 @@ static int qsv_d3d11_update_config(void *ctx, mfxHDL handle, mfxConfig cfg)
     impl_value.Data.U16 = adapterDesc.DeviceId;
     sts = MFXSetConfigFilterProperty(cfg,
                                      (const mfxU8 *)"mfxExtendedDeviceId.DeviceID", impl_value);
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error adding a MFX configuration"
-               "DeviceID property: %d.\n", sts);
+                                  "DeviceID property: %d.\n",
+               sts);
         goto fail;
     }
 
@@ -874,9 +942,11 @@ static int qsv_d3d11_update_config(void *ctx, mfxHDL handle, mfxConfig cfg)
     impl_value.Data.Ptr = &adapterDesc.AdapterLuid;
     sts = MFXSetConfigFilterProperty(cfg,
                                      (const mfxU8 *)"mfxExtendedDeviceId.DeviceLUID", impl_value);
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error adding a MFX configuration"
-               "DeviceLUID property: %d.\n", sts);
+                                  "DeviceLUID property: %d.\n",
+               sts);
         goto fail;
     }
 
@@ -884,9 +954,11 @@ static int qsv_d3d11_update_config(void *ctx, mfxHDL handle, mfxConfig cfg)
     impl_value.Data.U32 = 0x0001;
     sts = MFXSetConfigFilterProperty(cfg,
                                      (const mfxU8 *)"mfxExtendedDeviceId.LUIDDeviceNodeMask", impl_value);
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error adding a MFX configuration"
-               "LUIDDeviceNodeMask property: %d.\n", sts);
+                                  "LUIDDeviceNodeMask property: %d.\n",
+               sts);
         goto fail;
     }
 
@@ -904,7 +976,7 @@ static int qsv_d3d9_update_config(void *ctx, mfxHDL handle, mfxConfig cfg)
     int ret = AVERROR_UNKNOWN;
 #if CONFIG_DXVA2
     mfxStatus sts;
-    IDirect3DDeviceManager9* devmgr = handle;
+    IDirect3DDeviceManager9 *devmgr = handle;
     IDirect3DDevice9 *device = NULL;
     IDirect3DDevice9Ex *device_ex = NULL;
     HANDLE device_handle = 0;
@@ -916,47 +988,54 @@ static int qsv_d3d9_update_config(void *ctx, mfxHDL handle, mfxConfig cfg)
     mfxVariant impl_value = {0};
 
     hr = IDirect3DDeviceManager9_OpenDeviceHandle(devmgr, &device_handle);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         av_log(ctx, AV_LOG_ERROR, "Error OpenDeviceHandle %d\n", hr);
         goto fail;
     }
 
     hr = IDirect3DDeviceManager9_LockDevice(devmgr, device_handle, &device, TRUE);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         av_log(ctx, AV_LOG_ERROR, "Error LockDevice %d\n", hr);
         IDirect3DDeviceManager9_CloseDeviceHandle(devmgr, device_handle);
         goto fail;
     }
     hr = IDirect3DDevice9_QueryInterface(device, &IID_IDirect3DDevice9Ex, (void **)&device_ex);
     IDirect3DDevice9_Release(device);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         av_log(ctx, AV_LOG_ERROR, "Error IDirect3DDevice9_QueryInterface %d\n", hr);
         goto unlock;
     }
 
     hr = IDirect3DDevice9Ex_GetCreationParameters(device_ex, &params);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         av_log(ctx, AV_LOG_ERROR, "Error IDirect3DDevice9_GetCreationParameters %d\n", hr);
         IDirect3DDevice9Ex_Release(device_ex);
         goto unlock;
     }
 
     hr = IDirect3DDevice9Ex_GetDirect3D(device_ex, &d3d9);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         av_log(ctx, AV_LOG_ERROR, "Error IDirect3DDevice9Ex_GetDirect3D %d\n", hr);
         IDirect3DDevice9Ex_Release(device_ex);
         goto unlock;
     }
     hr = IDirect3D9_QueryInterface(d3d9, &IID_IDirect3D9Ex, (void **)&d3d9ex);
     IDirect3D9_Release(d3d9);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         av_log(ctx, AV_LOG_ERROR, "Error IDirect3D9_QueryInterface3D %d\n", hr);
         IDirect3DDevice9Ex_Release(device_ex);
         goto unlock;
     }
 
     hr = IDirect3D9Ex_GetAdapterLUID(d3d9ex, params.AdapterOrdinal, &luid);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         av_log(ctx, AV_LOG_ERROR, "Error IDirect3DDevice9Ex_GetAdapterLUID %d\n", hr);
         goto release;
     }
@@ -965,9 +1044,11 @@ static int qsv_d3d9_update_config(void *ctx, mfxHDL handle, mfxConfig cfg)
     impl_value.Data.Ptr = &luid;
     sts = MFXSetConfigFilterProperty(cfg,
                                      (const mfxU8 *)"mfxExtendedDeviceId.DeviceLUID", impl_value);
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error adding a MFX configuration"
-               "DeviceLUID property: %d.\n", sts);
+                                  "DeviceLUID property: %d.\n",
+               sts);
         goto release;
     }
 
@@ -998,19 +1079,24 @@ static int qsv_va_update_config(void *ctx, mfxHDL handle, mfxConfig cfg)
     mfxVariant impl_value = {0};
 
     vas = vaGetDisplayAttributes(dpy, &attr, 1);
-    if (vas == VA_STATUS_SUCCESS && attr.flags != VA_DISPLAY_ATTRIB_NOT_SUPPORTED) {
+    if (vas == VA_STATUS_SUCCESS && attr.flags != VA_DISPLAY_ATTRIB_NOT_SUPPORTED)
+    {
         impl_value.Type = MFX_VARIANT_TYPE_U16;
         impl_value.Data.U16 = (attr.value & 0xFFFF);
         sts = MFXSetConfigFilterProperty(cfg,
                                          (const mfxU8 *)"mfxImplDescription.mfxDeviceDescription.DeviceID", impl_value);
-        if (sts != MFX_ERR_NONE) {
+        if (sts != MFX_ERR_NONE)
+        {
             av_log(ctx, AV_LOG_ERROR, "Error adding a MFX configuration"
-                   "DeviceID property: %d.\n", sts);
+                                      "DeviceID property: %d.\n",
+                   sts);
             goto fail;
         }
-    } else {
+    }
+    else
+    {
         av_log(ctx, AV_LOG_ERROR, "libva: Failed to get device id from the driver. Please "
-               "consider to upgrade the driver to support VA-API 1.15.0\n");
+                                  "consider to upgrade the driver to support VA-API 1.15.0\n");
         goto fail;
     }
 
@@ -1019,8 +1105,8 @@ static int qsv_va_update_config(void *ctx, mfxHDL handle, mfxConfig cfg)
 fail:
 #else
     av_log(ctx, AV_LOG_ERROR, "libva: This version of libva doesn't support retrieving "
-           "the device information from the driver. Please consider to upgrade libva to "
-           "support VA-API 1.15.0\n");
+                              "the device information from the driver. Please consider to upgrade libva to "
+                              "support VA-API 1.15.0\n");
 #endif
 #endif
     return AVERROR_UNKNOWN;
@@ -1040,26 +1126,29 @@ static int qsv_new_mfx_loader(void *ctx,
 
     *ploader = NULL;
     loader = MFXLoad();
-    if (!loader) {
+    if (!loader)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error creating a MFX loader\n");
         goto fail;
     }
 
     /* Create configurations for implementation */
     cfg = MFXCreateConfig(loader);
-    if (!cfg) {
+    if (!cfg)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error creating a MFX configuration\n");
         goto fail;
     }
 
     impl_value.Type = MFX_VARIANT_TYPE_U32;
-    impl_value.Data.U32 = (implementation == MFX_IMPL_SOFTWARE) ?
-        MFX_IMPL_TYPE_SOFTWARE : MFX_IMPL_TYPE_HARDWARE;
+    impl_value.Data.U32 = (implementation == MFX_IMPL_SOFTWARE) ? MFX_IMPL_TYPE_SOFTWARE : MFX_IMPL_TYPE_HARDWARE;
     sts = MFXSetConfigFilterProperty(cfg,
                                      (const mfxU8 *)"mfxImplDescription.Impl", impl_value);
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error adding a MFX configuration "
-               "property: %d.\n", sts);
+                                  "property: %d.\n",
+               sts);
         goto fail;
     }
 
@@ -1068,9 +1157,11 @@ static int qsv_new_mfx_loader(void *ctx,
     sts = MFXSetConfigFilterProperty(cfg,
                                      (const mfxU8 *)"mfxImplDescription.ApiVersion.Version",
                                      impl_value);
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error adding a MFX configuration "
-               "property: %d.\n", sts);
+                                  "property: %d.\n",
+               sts);
         goto fail;
     }
 
@@ -1078,23 +1169,30 @@ static int qsv_new_mfx_loader(void *ctx,
     impl_value.Data.U32 = 0x8086; // Intel device only
     sts = MFXSetConfigFilterProperty(cfg,
                                      (const mfxU8 *)"mfxImplDescription.VendorID", impl_value);
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error adding a MFX configuration"
-               "VendorID property: %d.\n", sts);
+                                  "VendorID property: %d.\n",
+               sts);
         goto fail;
     }
 
-    if (MFX_HANDLE_VA_DISPLAY == handle_type) {
+    if (MFX_HANDLE_VA_DISPLAY == handle_type)
+    {
         if (handle && qsv_va_update_config(ctx, handle, cfg))
             goto fail;
 
         impl_value.Data.U32 = MFX_ACCEL_MODE_VIA_VAAPI;
-    } else if (MFX_HANDLE_D3D9_DEVICE_MANAGER == handle_type) {
+    }
+    else if (MFX_HANDLE_D3D9_DEVICE_MANAGER == handle_type)
+    {
         if (handle && qsv_d3d9_update_config(ctx, handle, cfg))
             goto fail;
 
         impl_value.Data.U32 = MFX_ACCEL_MODE_VIA_D3D9;
-    } else {
+    }
+    else
+    {
         if (handle && qsv_d3d11_update_config(ctx, handle, cfg))
             goto fail;
 
@@ -1104,9 +1202,11 @@ static int qsv_new_mfx_loader(void *ctx,
     impl_value.Type = MFX_VARIANT_TYPE_U32;
     sts = MFXSetConfigFilterProperty(cfg,
                                      (const mfxU8 *)"mfxImplDescription.AccelerationMode", impl_value);
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error adding a MFX configuration"
-               "AccelerationMode property: %d.\n", sts);
+                                  "AccelerationMode property: %d.\n",
+               sts);
         goto fail;
     }
 
@@ -1128,7 +1228,8 @@ static int qsv_create_mfx_session_from_loader(void *ctx, mfxLoader loader, mfxSe
     uint32_t impl_idx = 0;
     mfxVersion ver;
 
-    while (1) {
+    while (1)
+    {
         /* Enumerate all implementations */
         mfxImplDescription *impl_desc;
 
@@ -1138,7 +1239,8 @@ static int qsv_create_mfx_session_from_loader(void *ctx, mfxLoader loader, mfxSe
         /* Failed to find an available implementation */
         if (sts == MFX_ERR_NOT_FOUND)
             break;
-        else if (sts != MFX_ERR_NONE) {
+        else if (sts != MFX_ERR_NONE)
+        {
             impl_idx++;
             continue;
         }
@@ -1151,19 +1253,22 @@ static int qsv_create_mfx_session_from_loader(void *ctx, mfxLoader loader, mfxSe
         impl_idx++;
     }
 
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error creating a MFX session: %d.\n", sts);
         goto fail;
     }
 
     sts = MFXQueryVersion(session, &ver);
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error querying a MFX session: %d.\n", sts);
         goto fail;
     }
 
     av_log(ctx, AV_LOG_VERBOSE, "Initialize MFX session: implementation "
-           "version is %d.%d\n", ver.Major, ver.Minor);
+                                "version is %d.%d\n",
+           ver.Major, ver.Minor);
 
     *psession = session;
 
@@ -1193,7 +1298,8 @@ static int qsv_create_mfx_session(void *ctx,
 
     if (handle_type != MFX_HANDLE_VA_DISPLAY &&
         handle_type != MFX_HANDLE_D3D9_DEVICE_MANAGER &&
-        handle_type != MFX_HANDLE_D3D11_DEVICE) {
+        handle_type != MFX_HANDLE_D3D11_DEVICE)
+    {
         av_log(ctx, AV_LOG_ERROR,
                "Invalid MFX device handle type\n");
         return AVERROR(EXDEV);
@@ -1201,13 +1307,15 @@ static int qsv_create_mfx_session(void *ctx,
 
     *psession = NULL;
 
-    if (!*ploader) {
+    if (!*ploader)
+    {
         if (qsv_new_mfx_loader(ctx, handle, handle_type, implementation, pver, (void **)&loader))
             goto fail;
 
         av_assert0(loader);
-    } else
-        loader = *ploader;      // Use the input mfxLoader to create mfx session
+    }
+    else
+        loader = *ploader; // Use the input mfxLoader to create mfx session
 
     if (qsv_create_mfx_session_from_loader(ctx, loader, psession))
         goto fail;
@@ -1247,28 +1355,35 @@ static int qsv_create_mfx_session(void *ctx,
     *psession = NULL;
     ver = *pver;
     sts = MFXInit(implementation, &ver, &session);
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error initializing an MFX session: "
-               "%d.\n", sts);
+                                  "%d.\n",
+               sts);
         goto fail;
     }
 
     sts = MFXQueryVersion(session, &ver);
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error querying an MFX session: "
-               "%d.\n", sts);
+                                  "%d.\n",
+               sts);
         goto fail;
     }
 
     av_log(ctx, AV_LOG_VERBOSE, "Initialize MFX session: implementation "
-           "version is %d.%d\n", ver.Major, ver.Minor);
+                                "version is %d.%d\n",
+           ver.Major, ver.Minor);
 
     MFXClose(session);
 
     sts = MFXInit(implementation, &ver, &session);
-    if (sts != MFX_ERR_NONE) {
+    if (sts != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error initializing an MFX session: "
-               "%d.\n", sts);
+                                  "%d.\n",
+               sts);
         goto fail;
     }
 
@@ -1288,26 +1403,26 @@ fail:
 static int qsv_init_internal_session(AVHWFramesContext *ctx,
                                      mfxSession *session, int upload)
 {
-    QSVFramesContext              *s = ctx->hwctx;
+    QSVFramesContext *s = ctx->hwctx;
     AVQSVFramesContext *frames_hwctx = &s->p;
-    QSVDeviceContext   *device_priv  = ctx->device_ctx->hwctx;
-    AVQSVDeviceContext *hwctx        = &device_priv->p;
+    QSVDeviceContext *device_priv = ctx->device_ctx->hwctx;
+    AVQSVDeviceContext *hwctx = &device_priv->p;
     int opaque = 0;
 
     mfxFrameAllocator frame_allocator = {
-        .pthis  = ctx,
-        .Alloc  = frame_alloc,
-        .Lock   = frame_lock,
+        .pthis = ctx,
+        .Alloc = frame_alloc,
+        .Lock = frame_lock,
         .Unlock = frame_unlock,
         .GetHDL = frame_get_hdl,
-        .Free   = frame_free,
+        .Free = frame_free,
     };
 
     mfxVideoParam par;
     mfxStatus err;
-    int                   ret = AVERROR_UNKNOWN;
+    int ret = AVERROR_UNKNOWN;
     /* hwctx->loader is non-NULL for oneVPL user and NULL for non-oneVPL user */
-    void             **loader = &hwctx->loader;
+    void **loader = &hwctx->loader;
     mfxSession parent_session = hwctx->session;
     mfxIMPL impl;
     mfxVersion ver;
@@ -1315,7 +1430,8 @@ static int qsv_init_internal_session(AVHWFramesContext *ctx,
     err = MFXQueryIMPL(parent_session, &impl);
     if (err == MFX_ERR_NONE)
         err = MFXQueryVersion(parent_session, &ver);
-    if (err != MFX_ERR_NONE) {
+    if (err != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error querying the session attributes.\n");
         return AVERROR_UNKNOWN;
     }
@@ -1329,27 +1445,33 @@ static int qsv_init_internal_session(AVHWFramesContext *ctx,
     if (ret)
         goto fail;
 
-    if (device_priv->handle) {
+    if (device_priv->handle)
+    {
         err = MFXVideoCORE_SetHandle(*session, device_priv->handle_type,
                                      device_priv->handle);
-        if (err != MFX_ERR_NONE) {
+        if (err != MFX_ERR_NONE)
+        {
             ret = AVERROR_UNKNOWN;
             goto fail;
         }
     }
 
-    if (QSV_RUNTIME_VERSION_ATLEAST(ver, 1, 25)) {
+    if (QSV_RUNTIME_VERSION_ATLEAST(ver, 1, 25))
+    {
         err = MFXJoinSession(parent_session, *session);
-        if (err != MFX_ERR_NONE) {
+        if (err != MFX_ERR_NONE)
+        {
             av_log(ctx, AV_LOG_ERROR, "Error joining session.\n");
             ret = AVERROR_UNKNOWN;
             goto fail;
         }
     }
 
-    if (!opaque) {
+    if (!opaque)
+    {
         err = MFXVideoCORE_SetFrameAllocator(*session, &frame_allocator);
-        if (err != MFX_ERR_NONE) {
+        if (err != MFX_ERR_NONE)
+        {
             ret = AVERROR_UNKNOWN;
             goto fail;
         }
@@ -1357,21 +1479,20 @@ static int qsv_init_internal_session(AVHWFramesContext *ctx,
 
     memset(&par, 0, sizeof(par));
 
-    if (!opaque) {
-        par.IOPattern = upload ? MFX_IOPATTERN_OUT_VIDEO_MEMORY :
-                                 MFX_IOPATTERN_IN_VIDEO_MEMORY;
+    if (!opaque)
+    {
+        par.IOPattern = upload ? MFX_IOPATTERN_OUT_VIDEO_MEMORY : MFX_IOPATTERN_IN_VIDEO_MEMORY;
     }
 #if QSV_HAVE_OPAQUE
-    else {
-        par.ExtParam    = s->ext_buffers;
+    else
+    {
+        par.ExtParam = s->ext_buffers;
         par.NumExtParam = FF_ARRAY_ELEMS(s->ext_buffers);
-        par.IOPattern   = upload ? MFX_IOPATTERN_OUT_OPAQUE_MEMORY :
-                                   MFX_IOPATTERN_IN_OPAQUE_MEMORY;
+        par.IOPattern = upload ? MFX_IOPATTERN_OUT_OPAQUE_MEMORY : MFX_IOPATTERN_IN_OPAQUE_MEMORY;
     }
 #endif
 
-    par.IOPattern |= upload ? MFX_IOPATTERN_IN_SYSTEM_MEMORY :
-                              MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
+    par.IOPattern |= upload ? MFX_IOPATTERN_IN_SYSTEM_MEMORY : MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
     par.AsyncDepth = 1;
 
     par.vpp.In = frames_hwctx->nb_surfaces ? frames_hwctx->surfaces[0].Info : *frames_hwctx->info;
@@ -1385,9 +1506,10 @@ static int qsv_init_internal_session(AVHWFramesContext *ctx,
     par.vpp.Out = par.vpp.In;
 
     err = MFXVideoVPP_Init(*session, &par);
-    if (err != MFX_ERR_NONE) {
+    if (err != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_VERBOSE, "Error opening the internal VPP session."
-               "Surface upload/download will not be possible\n");
+                                    "Surface upload/download will not be possible\n");
 
         ret = AVERROR_UNKNOWN;
         goto fail;
@@ -1406,7 +1528,7 @@ fail:
 
 static int qsv_frames_init(AVHWFramesContext *ctx)
 {
-    QSVFramesContext              *s = ctx->hwctx;
+    QSVFramesContext *s = ctx->hwctx;
     AVQSVFramesContext *frames_hwctx = &s->p;
 
     int opaque = 0;
@@ -1419,20 +1541,24 @@ static int qsv_frames_init(AVHWFramesContext *ctx)
 #endif
 
     fourcc = qsv_fourcc_from_pix_fmt(ctx->sw_format);
-    if (!fourcc) {
+    if (!fourcc)
+    {
         av_log(ctx, AV_LOG_ERROR, "Unsupported pixel format\n");
         return AVERROR(ENOSYS);
     }
 
-    if (!ctx->pool) {
+    if (!ctx->pool)
+    {
         ret = qsv_init_pool(ctx, fourcc);
-        if (ret < 0) {
+        if (ret < 0)
+        {
             av_log(ctx, AV_LOG_ERROR, "Error creating an internal frame pool\n");
             return ret;
         }
     }
 
-    if (!opaque) {
+    if (!opaque)
+    {
         s->mem_ids = av_calloc(frames_hwctx->nb_surfaces, sizeof(*s->mem_ids));
         if (!s->mem_ids)
             return AVERROR(ENOMEM);
@@ -1441,7 +1567,8 @@ static int qsv_frames_init(AVHWFramesContext *ctx)
             s->mem_ids[i] = frames_hwctx->surfaces[i].Data.MemId;
     }
 #if QSV_HAVE_OPAQUE
-    else {
+    else
+    {
         s->surface_ptrs = av_calloc(frames_hwctx->nb_surfaces,
                                     sizeof(*s->surface_ptrs));
         if (!s->surface_ptrs)
@@ -1450,27 +1577,27 @@ static int qsv_frames_init(AVHWFramesContext *ctx)
         for (i = 0; i < frames_hwctx->nb_surfaces; i++)
             s->surface_ptrs[i] = frames_hwctx->surfaces + i;
 
-        s->opaque_alloc.In.Surfaces   = s->surface_ptrs;
+        s->opaque_alloc.In.Surfaces = s->surface_ptrs;
         s->opaque_alloc.In.NumSurface = frames_hwctx->nb_surfaces;
-        s->opaque_alloc.In.Type       = frames_hwctx->frame_type;
+        s->opaque_alloc.In.Type = frames_hwctx->frame_type;
 
         s->opaque_alloc.Out = s->opaque_alloc.In;
 
         s->opaque_alloc.Header.BufferId = MFX_EXTBUFF_OPAQUE_SURFACE_ALLOCATION;
         s->opaque_alloc.Header.BufferSz = sizeof(s->opaque_alloc);
 
-        s->ext_buffers[0] = (mfxExtBuffer*)&s->opaque_alloc;
+        s->ext_buffers[0] = (mfxExtBuffer *)&s->opaque_alloc;
     }
 #endif
 
     s->session_download = NULL;
-    s->session_upload   = NULL;
+    s->session_upload = NULL;
 
     s->session_download_init = 0;
-    s->session_upload_init   = 0;
+    s->session_upload_init = 0;
 
 #if HAVE_PTHREADS
-    pthread_mutex_init(&s->session_lock, NULL);
+    // pthread_mutex_init(&s->session_lock, NULL);
 #endif
 
     return 0;
@@ -1483,9 +1610,9 @@ static int qsv_get_buffer(AVHWFramesContext *ctx, AVFrame *frame)
         return AVERROR(ENOMEM);
 
     frame->data[3] = frame->buf[0]->data;
-    frame->format  = AV_PIX_FMT_QSV;
-    frame->width   = ctx->width;
-    frame->height  = ctx->height;
+    frame->format = AV_PIX_FMT_QSV;
+    frame->width = ctx->width;
+    frame->height = ctx->height;
 
     return 0;
 }
@@ -1514,68 +1641,74 @@ static int qsv_frames_derive_from(AVHWFramesContext *dst_ctx,
     AVQSVFramesContext *src_hwctx = src_ctx->hwctx;
     int i;
 
-    switch (dst_ctx->device_ctx->type) {
+    switch (dst_ctx->device_ctx->type)
+    {
 #if CONFIG_VAAPI
     case AV_HWDEVICE_TYPE_VAAPI:
+    {
+        AVVAAPIFramesContext *dst_hwctx = dst_ctx->hwctx;
+        dst_hwctx->surface_ids = av_calloc(src_hwctx->nb_surfaces,
+                                           sizeof(*dst_hwctx->surface_ids));
+        if (!dst_hwctx->surface_ids)
+            return AVERROR(ENOMEM);
+        for (i = 0; i < src_hwctx->nb_surfaces; i++)
         {
-            AVVAAPIFramesContext *dst_hwctx = dst_ctx->hwctx;
-            dst_hwctx->surface_ids = av_calloc(src_hwctx->nb_surfaces,
-                                               sizeof(*dst_hwctx->surface_ids));
-            if (!dst_hwctx->surface_ids)
-                return AVERROR(ENOMEM);
-            for (i = 0; i < src_hwctx->nb_surfaces; i++) {
-                mfxHDLPair *pair = (mfxHDLPair*)src_hwctx->surfaces[i].Data.MemId;
-                dst_hwctx->surface_ids[i] = *(VASurfaceID*)pair->first;
-            }
-            dst_hwctx->nb_surfaces = src_hwctx->nb_surfaces;
+            mfxHDLPair *pair = (mfxHDLPair *)src_hwctx->surfaces[i].Data.MemId;
+            dst_hwctx->surface_ids[i] = *(VASurfaceID *)pair->first;
         }
-        break;
+        dst_hwctx->nb_surfaces = src_hwctx->nb_surfaces;
+    }
+    break;
 #endif
 #if CONFIG_D3D11VA
     case AV_HWDEVICE_TYPE_D3D11VA:
+    {
+        D3D11_TEXTURE2D_DESC texDesc;
+        AVD3D11VAFramesContext *dst_hwctx;
+        dst_ctx->initial_pool_size = src_ctx->initial_pool_size;
+        dst_hwctx = dst_ctx->hwctx;
+        dst_hwctx->texture_infos = av_calloc(src_hwctx->nb_surfaces,
+                                             sizeof(*dst_hwctx->texture_infos));
+        if (!dst_hwctx->texture_infos)
+            return AVERROR(ENOMEM);
+        if (src_hwctx->frame_type & MFX_MEMTYPE_SHARED_RESOURCE)
+            dst_hwctx->MiscFlags = D3D11_RESOURCE_MISC_SHARED;
+        for (i = 0; i < src_hwctx->nb_surfaces; i++)
         {
-            D3D11_TEXTURE2D_DESC texDesc;
-            AVD3D11VAFramesContext *dst_hwctx;
-            dst_ctx->initial_pool_size = src_ctx->initial_pool_size;
-            dst_hwctx = dst_ctx->hwctx;
-            dst_hwctx->texture_infos = av_calloc(src_hwctx->nb_surfaces,
-                                                 sizeof(*dst_hwctx->texture_infos));
-            if (!dst_hwctx->texture_infos)
-                return AVERROR(ENOMEM);
-            if (src_hwctx->frame_type & MFX_MEMTYPE_SHARED_RESOURCE)
-                dst_hwctx->MiscFlags = D3D11_RESOURCE_MISC_SHARED;
-            for (i = 0; i < src_hwctx->nb_surfaces; i++) {
-                mfxHDLPair *pair = (mfxHDLPair*)src_hwctx->surfaces[i].Data.MemId;
-                dst_hwctx->texture_infos[i].texture = (ID3D11Texture2D*)pair->first;
-                dst_hwctx->texture_infos[i].index = pair->second == (mfxMemId)MFX_INFINITE ? (intptr_t)0 : (intptr_t)pair->second;
-            }
-            if (src_hwctx->nb_surfaces) {
-                ID3D11Texture2D_GetDesc(dst_hwctx->texture_infos[0].texture, &texDesc);
-                dst_hwctx->BindFlags = texDesc.BindFlags;
-            } else
-                dst_hwctx->BindFlags = qsv_get_d3d11va_bind_flags(src_hwctx->frame_type);
+            mfxHDLPair *pair = (mfxHDLPair *)src_hwctx->surfaces[i].Data.MemId;
+            dst_hwctx->texture_infos[i].texture = (ID3D11Texture2D *)pair->first;
+            dst_hwctx->texture_infos[i].index = pair->second == (mfxMemId)MFX_INFINITE ? (intptr_t)0 : (intptr_t)pair->second;
         }
-        break;
+        if (src_hwctx->nb_surfaces)
+        {
+            ID3D11Texture2D_GetDesc(dst_hwctx->texture_infos[0].texture, &texDesc);
+            dst_hwctx->BindFlags = texDesc.BindFlags;
+        }
+        else
+            dst_hwctx->BindFlags = qsv_get_d3d11va_bind_flags(src_hwctx->frame_type);
+    }
+    break;
 #endif
 #if CONFIG_DXVA2
     case AV_HWDEVICE_TYPE_DXVA2:
+    {
+        AVDXVA2FramesContext *dst_hwctx = dst_ctx->hwctx;
+        dst_hwctx->surfaces = av_calloc(src_hwctx->nb_surfaces,
+                                        sizeof(*dst_hwctx->surfaces));
+        if (!dst_hwctx->surfaces)
+            return AVERROR(ENOMEM);
+        for (i = 0; i < src_hwctx->nb_surfaces; i++)
         {
-            AVDXVA2FramesContext *dst_hwctx = dst_ctx->hwctx;
-            dst_hwctx->surfaces = av_calloc(src_hwctx->nb_surfaces,
-                                            sizeof(*dst_hwctx->surfaces));
-            if (!dst_hwctx->surfaces)
-                return AVERROR(ENOMEM);
-            for (i = 0; i < src_hwctx->nb_surfaces; i++) {
-                mfxHDLPair *pair = (mfxHDLPair*)src_hwctx->surfaces[i].Data.MemId;
-                dst_hwctx->surfaces[i] = (IDirect3DSurface9*)pair->first;
-            }
-            dst_hwctx->nb_surfaces = src_hwctx->nb_surfaces;
-            if (src_hwctx->frame_type == MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET)
-                dst_hwctx->surface_type = DXVA2_VideoDecoderRenderTarget;
-            else
-                dst_hwctx->surface_type = DXVA2_VideoProcessorRenderTarget;
+            mfxHDLPair *pair = (mfxHDLPair *)src_hwctx->surfaces[i].Data.MemId;
+            dst_hwctx->surfaces[i] = (IDirect3DSurface9 *)pair->first;
         }
-        break;
+        dst_hwctx->nb_surfaces = src_hwctx->nb_surfaces;
+        if (src_hwctx->frame_type == MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET)
+            dst_hwctx->surface_type = DXVA2_VideoDecoderRenderTarget;
+        else
+            dst_hwctx->surface_type = DXVA2_VideoProcessorRenderTarget;
+    }
+    break;
 #endif
     default:
         return AVERROR(ENOSYS);
@@ -1588,7 +1721,7 @@ static int qsv_map_from(AVHWFramesContext *ctx,
                         AVFrame *dst, const AVFrame *src, int flags)
 {
     QSVFramesContext *s = ctx->hwctx;
-    mfxFrameSurface1 *surf = (mfxFrameSurface1*)src->data[3];
+    mfxFrameSurface1 *surf = (mfxFrameSurface1 *)src->data[3];
     AVHWFramesContext *child_frames_ctx;
     const AVPixFmtDescriptor *desc;
     uint8_t *child_data;
@@ -1597,25 +1730,26 @@ static int qsv_map_from(AVHWFramesContext *ctx,
 
     if (!s->child_frames_ref)
         return AVERROR(ENOSYS);
-    child_frames_ctx = (AVHWFramesContext*)s->child_frames_ref->data;
+    child_frames_ctx = (AVHWFramesContext *)s->child_frames_ref->data;
 
-    switch (child_frames_ctx->device_ctx->type) {
+    switch (child_frames_ctx->device_ctx->type)
+    {
 #if CONFIG_VAAPI
     case AV_HWDEVICE_TYPE_VAAPI:
     {
-        mfxHDLPair *pair = (mfxHDLPair*)surf->Data.MemId;
+        mfxHDLPair *pair = (mfxHDLPair *)surf->Data.MemId;
         /* pair->first is *VASurfaceID while data[3] in vaapi frame is VASurfaceID, so
          * we need this casting for vaapi.
          * Add intptr_t to force cast from VASurfaceID(uint) type to pointer(long) type
          * to avoid compile warning */
-        child_data = (uint8_t*)(intptr_t)*(VASurfaceID*)pair->first;
+        child_data = (uint8_t *)(intptr_t) * (VASurfaceID *)pair->first;
         break;
     }
 #endif
 #if CONFIG_D3D11VA
     case AV_HWDEVICE_TYPE_D3D11VA:
     {
-        mfxHDLPair *pair = (mfxHDLPair*)surf->Data.MemId;
+        mfxHDLPair *pair = (mfxHDLPair *)surf->Data.MemId;
         child_data = pair->first;
         break;
     }
@@ -1623,7 +1757,7 @@ static int qsv_map_from(AVHWFramesContext *ctx,
 #if CONFIG_DXVA2
     case AV_HWDEVICE_TYPE_DXVA2:
     {
-        mfxHDLPair *pair = (mfxHDLPair*)surf->Data.MemId;
+        mfxHDLPair *pair = (mfxHDLPair *)surf->Data.MemId;
         child_data = pair->first;
         break;
     }
@@ -1632,20 +1766,24 @@ static int qsv_map_from(AVHWFramesContext *ctx,
         return AVERROR(ENOSYS);
     }
 
-    if (dst->format == child_frames_ctx->format) {
+    if (dst->format == child_frames_ctx->format)
+    {
         ret = ff_hwframe_map_create(s->child_frames_ref,
                                     dst, src, NULL, NULL);
         if (ret < 0)
             return ret;
 
-        dst->width   = src->width;
-        dst->height  = src->height;
+        dst->width = src->width;
+        dst->height = src->height;
 
-       if (child_frames_ctx->device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA) {
-            mfxHDLPair *pair = (mfxHDLPair*)surf->Data.MemId;
+        if (child_frames_ctx->device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA)
+        {
+            mfxHDLPair *pair = (mfxHDLPair *)surf->Data.MemId;
             dst->data[0] = pair->first;
             dst->data[1] = pair->second == (mfxMemId)MFX_INFINITE ? (uint8_t *)0 : pair->second;
-        } else {
+        }
+        else
+        {
             dst->data[3] = child_data;
         }
 
@@ -1653,7 +1791,8 @@ static int qsv_map_from(AVHWFramesContext *ctx,
     }
 
     desc = av_pix_fmt_desc_get(dst->format);
-    if (desc && desc->flags & AV_PIX_FMT_FLAG_HWACCEL) {
+    if (desc && desc->flags & AV_PIX_FMT_FLAG_HWACCEL)
+    {
         // This only supports mapping to software.
         return AVERROR(ENOSYS);
     }
@@ -1662,20 +1801,23 @@ static int qsv_map_from(AVHWFramesContext *ctx,
     if (!dummy)
         return AVERROR(ENOMEM);
 
-    dummy->buf[0]        = av_buffer_ref(src->buf[0]);
+    dummy->buf[0] = av_buffer_ref(src->buf[0]);
     dummy->hw_frames_ctx = av_buffer_ref(s->child_frames_ref);
     if (!dummy->buf[0] || !dummy->hw_frames_ctx)
         goto fail;
 
-    dummy->format        = child_frames_ctx->format;
-    dummy->width         = src->width;
-    dummy->height        = src->height;
+    dummy->format = child_frames_ctx->format;
+    dummy->width = src->width;
+    dummy->height = src->height;
 
-    if (child_frames_ctx->device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA) {
-        mfxHDLPair *pair = (mfxHDLPair*)surf->Data.MemId;
+    if (child_frames_ctx->device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA)
+    {
+        mfxHDLPair *pair = (mfxHDLPair *)surf->Data.MemId;
         dummy->data[0] = pair->first;
         dummy->data[1] = pair->second == (mfxMemId)MFX_INFINITE ? (uint8_t *)0 : pair->second;
-    } else {
+    }
+    else
+    {
         dummy->data[3] = child_data;
     }
 
@@ -1691,9 +1833,9 @@ static int qsv_transfer_data_child(AVHWFramesContext *ctx, AVFrame *dst,
                                    const AVFrame *src)
 {
     QSVFramesContext *s = ctx->hwctx;
-    AVHWFramesContext *child_frames_ctx = (AVHWFramesContext*)s->child_frames_ref->data;
+    AVHWFramesContext *child_frames_ctx = (AVHWFramesContext *)s->child_frames_ref->data;
     int download = !!src->hw_frames_ctx;
-    mfxFrameSurface1 *surf = (mfxFrameSurface1*)(download ? src->data[3] : dst->data[3]);
+    mfxFrameSurface1 *surf = (mfxFrameSurface1 *)(download ? src->data[3] : dst->data[3]);
 
     AVFrame *dummy;
     int ret;
@@ -1702,18 +1844,17 @@ static int qsv_transfer_data_child(AVHWFramesContext *ctx, AVFrame *dst,
     if (!dummy)
         return AVERROR(ENOMEM);
 
-    dummy->format        = child_frames_ctx->format;
-    dummy->width         = src->width;
-    dummy->height        = src->height;
-    dummy->buf[0]        = download ? src->buf[0] : dst->buf[0];
-    dummy->data[3]       = surf->Data.MemId;
+    dummy->format = child_frames_ctx->format;
+    dummy->width = src->width;
+    dummy->height = src->height;
+    dummy->buf[0] = download ? src->buf[0] : dst->buf[0];
+    dummy->data[3] = surf->Data.MemId;
     dummy->hw_frames_ctx = s->child_frames_ref;
 
-    ret = download ? av_hwframe_transfer_data(dst, dummy, 0) :
-                     av_hwframe_transfer_data(dummy, src, 0);
+    ret = download ? av_hwframe_transfer_data(dst, dummy, 0) : av_hwframe_transfer_data(dummy, src, 0);
 
-    dummy->buf[0]        = NULL;
-    dummy->data[3]       = NULL;
+    dummy->buf[0] = NULL;
+    dummy->data[3] = NULL;
     dummy->hw_frames_ctx = NULL;
 
     av_frame_free(&dummy);
@@ -1723,11 +1864,12 @@ static int qsv_transfer_data_child(AVHWFramesContext *ctx, AVFrame *dst,
 
 static int map_frame_to_surface(const AVFrame *frame, mfxFrameSurface1 *surface)
 {
-    switch (frame->format) {
+    switch (frame->format)
+    {
     case AV_PIX_FMT_NV12:
     case AV_PIX_FMT_P010:
     case AV_PIX_FMT_P012:
-        surface->Data.Y  = frame->data[0];
+        surface->Data.Y = frame->data[0];
         surface->Data.UV = frame->data[1];
         break;
 
@@ -1784,7 +1926,7 @@ static int map_frame_to_surface(const AVFrame *frame, mfxFrameSurface1 *surface)
     default:
         return MFX_ERR_UNSUPPORTED;
     }
-    surface->Data.Pitch     = frame->linesize[0];
+    surface->Data.Pitch = frame->linesize[0];
     surface->Data.TimeStamp = frame->pts;
 
     return 0;
@@ -1793,24 +1935,25 @@ static int map_frame_to_surface(const AVFrame *frame, mfxFrameSurface1 *surface)
 static int qsv_internal_session_check_init(AVHWFramesContext *ctx, int upload)
 {
     QSVFramesContext *s = ctx->hwctx;
-    atomic_int *inited  = upload ? &s->session_upload_init : &s->session_download_init;
-    mfxSession *session = upload ? &s->session_upload      : &s->session_download;
+    atomic_int *inited = upload ? &s->session_upload_init : &s->session_download_init;
+    mfxSession *session = upload ? &s->session_upload : &s->session_download;
     int ret = 0;
 
     if (atomic_load(inited))
         return 0;
 
 #if HAVE_PTHREADS
-    pthread_mutex_lock(&s->session_lock);
+        // pthread_mutex_lock(&s->session_lock);
 #endif
 
-    if (!atomic_load(inited)) {
+    if (!atomic_load(inited))
+    {
         ret = qsv_init_internal_session(ctx, session, upload);
         atomic_store(inited, 1);
     }
 
 #if HAVE_PTHREADS
-    pthread_mutex_unlock(&s->session_lock);
+    // pthread_mutex_unlock(&s->session_lock);
 #endif
 
     return ret;
@@ -1819,9 +1962,9 @@ static int qsv_internal_session_check_init(AVHWFramesContext *ctx, int upload)
 static int qsv_transfer_data_from(AVHWFramesContext *ctx, AVFrame *dst,
                                   const AVFrame *src)
 {
-    QSVFramesContext  *s = ctx->hwctx;
-    mfxFrameSurface1 out = {{ 0 }};
-    mfxFrameSurface1 *in = (mfxFrameSurface1*)src->data[3];
+    QSVFramesContext *s = ctx->hwctx;
+    mfxFrameSurface1 out = {{0}};
+    mfxFrameSurface1 *in = (mfxFrameSurface1 *)src->data[3];
 
     mfxSyncPoint sync = NULL;
     mfxStatus err;
@@ -1838,15 +1981,17 @@ static int qsv_transfer_data_from(AVHWFramesContext *ctx, AVFrame *dst,
     /* According to MSDK spec for mfxframeinfo, "Width must be a multiple of 16.
      * Height must be a multiple of 16 for progressive frame sequence and a
      * multiple of 32 otherwise.", so allign all frames to 16 before downloading. */
-    if (dst->height & 15 || dst->linesize[0] & 15) {
+    if (dst->height & 15 || dst->linesize[0] & 15)
+    {
         realigned = 1;
         if (tmp_frame->format != dst->format ||
-            tmp_frame->width  != FFALIGN(dst->linesize[0], 16) ||
-            tmp_frame->height != FFALIGN(dst->height, 16)) {
+            tmp_frame->width != FFALIGN(dst->linesize[0], 16) ||
+            tmp_frame->height != FFALIGN(dst->height, 16))
+        {
             av_frame_unref(tmp_frame);
 
             tmp_frame->format = dst->format;
-            tmp_frame->width  = FFALIGN(dst->linesize[0], 16);
+            tmp_frame->width = FFALIGN(dst->linesize[0], 16);
             tmp_frame->height = FFALIGN(dst->height, 16);
             ret = av_frame_get_buffer(tmp_frame, 0);
             if (ret < 0)
@@ -1856,7 +2001,8 @@ static int qsv_transfer_data_from(AVHWFramesContext *ctx, AVFrame *dst,
 
     dst_frame = realigned ? tmp_frame : dst;
 
-    if (!s->session_download) {
+    if (!s->session_download)
+    {
         if (s->child_frames_ref)
             return qsv_transfer_data_child(ctx, dst_frame, src);
 
@@ -1867,30 +2013,35 @@ static int qsv_transfer_data_from(AVHWFramesContext *ctx, AVFrame *dst,
     out.Info = in->Info;
     map_frame_to_surface(dst_frame, &out);
 
-    do {
+    do
+    {
         err = MFXVideoVPP_RunFrameVPPAsync(s->session_download, in, &out, NULL, &sync);
         if (err == MFX_WRN_DEVICE_BUSY)
             av_usleep(1);
     } while (err == MFX_WRN_DEVICE_BUSY);
 
-    if (err < 0 || !sync) {
+    if (err < 0 || !sync)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error downloading the surface\n");
         return AVERROR_UNKNOWN;
     }
 
-    do {
+    do
+    {
         err = MFXVideoCORE_SyncOperation(s->session_download, sync, 1000);
     } while (err == MFX_WRN_IN_EXECUTION);
-    if (err < 0) {
+    if (err < 0)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error synchronizing the operation: %d\n", err);
         return AVERROR_UNKNOWN;
     }
 
-    if (realigned) {
-        tmp_frame->width  = dst->width;
+    if (realigned)
+    {
+        tmp_frame->width = dst->width;
         tmp_frame->height = dst->height;
         ret = av_frame_copy(dst, tmp_frame);
-        tmp_frame->width  = FFALIGN(dst->linesize[0], 16);
+        tmp_frame->width = FFALIGN(dst->linesize[0], 16);
         tmp_frame->height = FFALIGN(dst->height, 16);
         if (ret < 0)
             return ret;
@@ -1902,9 +2053,9 @@ static int qsv_transfer_data_from(AVHWFramesContext *ctx, AVFrame *dst,
 static int qsv_transfer_data_to(AVHWFramesContext *ctx, AVFrame *dst,
                                 const AVFrame *src)
 {
-    QSVFramesContext   *s = ctx->hwctx;
-    mfxFrameSurface1   in = {{ 0 }};
-    mfxFrameSurface1 *out = (mfxFrameSurface1*)dst->data[3];
+    QSVFramesContext *s = ctx->hwctx;
+    mfxFrameSurface1 in = {{0}};
+    mfxFrameSurface1 *out = (mfxFrameSurface1 *)dst->data[3];
     mfxFrameInfo tmp_info;
 
     mfxSyncPoint sync = NULL;
@@ -1922,39 +2073,44 @@ static int qsv_transfer_data_to(AVHWFramesContext *ctx, AVFrame *dst,
     /* According to MSDK spec for mfxframeinfo, "Width must be a multiple of 16.
      * Height must be a multiple of 16 for progressive frame sequence and a
      * multiple of 32 otherwise.", so allign all frames to 16 before uploading. */
-    if (src->height & 15 || src->linesize[0] & 15) {
+    if (src->height & 15 || src->linesize[0] & 15)
+    {
         realigned = 1;
         if (tmp_frame->format != src->format ||
-            tmp_frame->width  != FFALIGN(src->width, 16) ||
-            tmp_frame->height != FFALIGN(src->height, 16)) {
+            tmp_frame->width != FFALIGN(src->width, 16) ||
+            tmp_frame->height != FFALIGN(src->height, 16))
+        {
             av_frame_unref(tmp_frame);
 
             tmp_frame->format = src->format;
-            tmp_frame->width  = FFALIGN(src->width, 16);
+            tmp_frame->width = FFALIGN(src->width, 16);
             tmp_frame->height = FFALIGN(src->height, 16);
             ret = av_frame_get_buffer(tmp_frame, 0);
             if (ret < 0)
                 return ret;
         }
         ret = av_frame_copy(tmp_frame, src);
-        if (ret < 0) {
+        if (ret < 0)
+        {
             av_frame_unref(tmp_frame);
             return ret;
         }
         ret = qsv_fill_border(tmp_frame, src);
-        if (ret < 0) {
+        if (ret < 0)
+        {
             av_frame_unref(tmp_frame);
             return ret;
         }
 
         tmp_info = out->Info;
-        out->Info.CropW = FFMIN(out->Info.Width,  tmp_frame->width);
+        out->Info.CropW = FFMIN(out->Info.Width, tmp_frame->width);
         out->Info.CropH = FFMIN(out->Info.Height, tmp_frame->height);
     }
 
     src_frame = realigned ? tmp_frame : src;
 
-    if (!s->session_upload) {
+    if (!s->session_upload)
+    {
         if (s->child_frames_ref)
             return qsv_transfer_data_child(ctx, dst, src_frame);
 
@@ -1965,26 +2121,31 @@ static int qsv_transfer_data_to(AVHWFramesContext *ctx, AVFrame *dst,
     in.Info = out->Info;
     map_frame_to_surface(src_frame, &in);
 
-    do {
+    do
+    {
         err = MFXVideoVPP_RunFrameVPPAsync(s->session_upload, &in, out, NULL, &sync);
         if (err == MFX_WRN_DEVICE_BUSY)
             av_usleep(1);
     } while (err == MFX_WRN_DEVICE_BUSY);
 
-    if (err < 0 || !sync) {
+    if (err < 0 || !sync)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error uploading the surface\n");
         return AVERROR_UNKNOWN;
     }
 
-    do {
+    do
+    {
         err = MFXVideoCORE_SyncOperation(s->session_upload, sync, 1000);
     } while (err == MFX_WRN_IN_EXECUTION);
-    if (err < 0) {
+    if (err < 0)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error synchronizing the operation\n");
         return AVERROR_UNKNOWN;
     }
 
-    if (realigned) {
+    if (realigned)
+    {
         out->Info.CropW = tmp_info.CropW;
         out->Info.CropH = tmp_info.CropH;
     }
@@ -1999,10 +2160,11 @@ static int qsv_dynamic_frames_derive_to(AVHWFramesContext *dst_ctx,
     AVQSVFramesContext *dst_hwctx = &s->p;
     mfxFrameSurface1 mfx_surf1;
 
-    switch (src_ctx->device_ctx->type) {
+    switch (src_ctx->device_ctx->type)
+    {
 #if CONFIG_VAAPI
     case AV_HWDEVICE_TYPE_VAAPI:
-        dst_hwctx->frame_type  = MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET;
+        dst_hwctx->frame_type = MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET;
         break;
 #endif
 
@@ -2011,9 +2173,12 @@ static int qsv_dynamic_frames_derive_to(AVHWFramesContext *dst_ctx,
     {
         AVD3D11VAFramesContext *src_hwctx = src_ctx->hwctx;
 
-        if (src_hwctx->BindFlags & D3D11_BIND_RENDER_TARGET) {
+        if (src_hwctx->BindFlags & D3D11_BIND_RENDER_TARGET)
+        {
             dst_hwctx->frame_type |= MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET;
-        } else {
+        }
+        else
+        {
             dst_hwctx->frame_type |= MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET;
         }
     }
@@ -2039,86 +2204,96 @@ static int qsv_fixed_frames_derive_to(AVHWFramesContext *dst_ctx,
     AVQSVFramesContext *dst_hwctx = &s->p;
     int i;
 
-    switch (src_ctx->device_ctx->type) {
+    switch (src_ctx->device_ctx->type)
+    {
 #if CONFIG_VAAPI
     case AV_HWDEVICE_TYPE_VAAPI:
+    {
+        AVVAAPIFramesContext *src_hwctx = src_ctx->hwctx;
+        s->handle_pairs_internal = av_calloc(src_ctx->initial_pool_size,
+                                             sizeof(*s->handle_pairs_internal));
+        if (!s->handle_pairs_internal)
+            return AVERROR(ENOMEM);
+        s->surfaces_internal = av_calloc(src_hwctx->nb_surfaces,
+                                         sizeof(*s->surfaces_internal));
+        if (!s->surfaces_internal)
+            return AVERROR(ENOMEM);
+        for (i = 0; i < src_hwctx->nb_surfaces; i++)
         {
-            AVVAAPIFramesContext *src_hwctx = src_ctx->hwctx;
-            s->handle_pairs_internal = av_calloc(src_ctx->initial_pool_size,
-                                                 sizeof(*s->handle_pairs_internal));
-            if (!s->handle_pairs_internal)
-                return AVERROR(ENOMEM);
-            s->surfaces_internal = av_calloc(src_hwctx->nb_surfaces,
-                                             sizeof(*s->surfaces_internal));
-            if (!s->surfaces_internal)
-                return AVERROR(ENOMEM);
-            for (i = 0; i < src_hwctx->nb_surfaces; i++) {
-                qsv_init_surface(dst_ctx, &s->surfaces_internal[i]);
-                s->handle_pairs_internal[i].first = src_hwctx->surface_ids + i;
-                s->handle_pairs_internal[i].second = (mfxMemId)MFX_INFINITE;
-                s->surfaces_internal[i].Data.MemId = (mfxMemId)&s->handle_pairs_internal[i];
-            }
-            dst_hwctx->nb_surfaces = src_hwctx->nb_surfaces;
-            dst_hwctx->frame_type  = MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET;
+            qsv_init_surface(dst_ctx, &s->surfaces_internal[i]);
+            s->handle_pairs_internal[i].first = src_hwctx->surface_ids + i;
+            s->handle_pairs_internal[i].second = (mfxMemId)MFX_INFINITE;
+            s->surfaces_internal[i].Data.MemId = (mfxMemId)&s->handle_pairs_internal[i];
         }
-        break;
+        dst_hwctx->nb_surfaces = src_hwctx->nb_surfaces;
+        dst_hwctx->frame_type = MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET;
+    }
+    break;
 #endif
 #if CONFIG_D3D11VA
     case AV_HWDEVICE_TYPE_D3D11VA:
+    {
+        AVD3D11VAFramesContext *src_hwctx = src_ctx->hwctx;
+        s->handle_pairs_internal = av_calloc(src_ctx->initial_pool_size,
+                                             sizeof(*s->handle_pairs_internal));
+        if (!s->handle_pairs_internal)
+            return AVERROR(ENOMEM);
+        s->surfaces_internal = av_calloc(src_ctx->initial_pool_size,
+                                         sizeof(*s->surfaces_internal));
+        if (!s->surfaces_internal)
+            return AVERROR(ENOMEM);
+        for (i = 0; i < src_ctx->initial_pool_size; i++)
         {
-            AVD3D11VAFramesContext *src_hwctx = src_ctx->hwctx;
-            s->handle_pairs_internal = av_calloc(src_ctx->initial_pool_size,
-                                                 sizeof(*s->handle_pairs_internal));
-            if (!s->handle_pairs_internal)
-                return AVERROR(ENOMEM);
-            s->surfaces_internal = av_calloc(src_ctx->initial_pool_size,
-                                             sizeof(*s->surfaces_internal));
-            if (!s->surfaces_internal)
-                return AVERROR(ENOMEM);
-            for (i = 0; i < src_ctx->initial_pool_size; i++) {
-                qsv_init_surface(dst_ctx, &s->surfaces_internal[i]);
-                s->handle_pairs_internal[i].first = (mfxMemId)src_hwctx->texture_infos[i].texture;
-                if (src_hwctx->BindFlags & D3D11_BIND_RENDER_TARGET) {
-                    s->handle_pairs_internal[i].second = (mfxMemId)MFX_INFINITE;
-                } else {
-                    s->handle_pairs_internal[i].second = (mfxMemId)src_hwctx->texture_infos[i].index;
-                }
-                s->surfaces_internal[i].Data.MemId = (mfxMemId)&s->handle_pairs_internal[i];
+            qsv_init_surface(dst_ctx, &s->surfaces_internal[i]);
+            s->handle_pairs_internal[i].first = (mfxMemId)src_hwctx->texture_infos[i].texture;
+            if (src_hwctx->BindFlags & D3D11_BIND_RENDER_TARGET)
+            {
+                s->handle_pairs_internal[i].second = (mfxMemId)MFX_INFINITE;
             }
-            dst_hwctx->nb_surfaces = src_ctx->initial_pool_size;
-            if (src_hwctx->BindFlags & D3D11_BIND_RENDER_TARGET) {
-                dst_hwctx->frame_type |= MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET;
-            } else {
-                dst_hwctx->frame_type |= MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET;
+            else
+            {
+                s->handle_pairs_internal[i].second = (mfxMemId)src_hwctx->texture_infos[i].index;
             }
+            s->surfaces_internal[i].Data.MemId = (mfxMemId)&s->handle_pairs_internal[i];
         }
-        break;
+        dst_hwctx->nb_surfaces = src_ctx->initial_pool_size;
+        if (src_hwctx->BindFlags & D3D11_BIND_RENDER_TARGET)
+        {
+            dst_hwctx->frame_type |= MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET;
+        }
+        else
+        {
+            dst_hwctx->frame_type |= MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET;
+        }
+    }
+    break;
 #endif
 #if CONFIG_DXVA2
     case AV_HWDEVICE_TYPE_DXVA2:
+    {
+        AVDXVA2FramesContext *src_hwctx = src_ctx->hwctx;
+        s->handle_pairs_internal = av_calloc(src_ctx->initial_pool_size,
+                                             sizeof(*s->handle_pairs_internal));
+        if (!s->handle_pairs_internal)
+            return AVERROR(ENOMEM);
+        s->surfaces_internal = av_calloc(src_hwctx->nb_surfaces,
+                                         sizeof(*s->surfaces_internal));
+        if (!s->surfaces_internal)
+            return AVERROR(ENOMEM);
+        for (i = 0; i < src_hwctx->nb_surfaces; i++)
         {
-            AVDXVA2FramesContext *src_hwctx = src_ctx->hwctx;
-            s->handle_pairs_internal = av_calloc(src_ctx->initial_pool_size,
-                                                 sizeof(*s->handle_pairs_internal));
-            if (!s->handle_pairs_internal)
-                return AVERROR(ENOMEM);
-            s->surfaces_internal = av_calloc(src_hwctx->nb_surfaces,
-                                             sizeof(*s->surfaces_internal));
-            if (!s->surfaces_internal)
-                return AVERROR(ENOMEM);
-            for (i = 0; i < src_hwctx->nb_surfaces; i++) {
-                qsv_init_surface(dst_ctx, &s->surfaces_internal[i]);
-                s->handle_pairs_internal[i].first = (mfxMemId)src_hwctx->surfaces[i];
-                s->handle_pairs_internal[i].second = (mfxMemId)MFX_INFINITE;
-                s->surfaces_internal[i].Data.MemId = (mfxMemId)&s->handle_pairs_internal[i];
-            }
-            dst_hwctx->nb_surfaces = src_hwctx->nb_surfaces;
-            if (src_hwctx->surface_type == DXVA2_VideoProcessorRenderTarget)
-                dst_hwctx->frame_type = MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET;
-            else
-                dst_hwctx->frame_type = MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET;
+            qsv_init_surface(dst_ctx, &s->surfaces_internal[i]);
+            s->handle_pairs_internal[i].first = (mfxMemId)src_hwctx->surfaces[i];
+            s->handle_pairs_internal[i].second = (mfxMemId)MFX_INFINITE;
+            s->surfaces_internal[i].Data.MemId = (mfxMemId)&s->handle_pairs_internal[i];
         }
-        break;
+        dst_hwctx->nb_surfaces = src_hwctx->nb_surfaces;
+        if (src_hwctx->surface_type == DXVA2_VideoProcessorRenderTarget)
+            dst_hwctx->frame_type = MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET;
+        else
+            dst_hwctx->frame_type = MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET;
+    }
+    break;
 #endif
     default:
         return AVERROR(ENOSYS);
@@ -2132,12 +2307,17 @@ static int qsv_fixed_frames_derive_to(AVHWFramesContext *dst_ctx,
 static int qsv_frames_derive_to(AVHWFramesContext *dst_ctx,
                                 AVHWFramesContext *src_ctx, int flags)
 {
-    if (src_ctx->initial_pool_size < 0) {
+    if (src_ctx->initial_pool_size < 0)
+    {
         av_log(dst_ctx, AV_LOG_ERROR, "Invalid src frame pool. \n");
         return AVERROR(EINVAL);
-    } else if (src_ctx->initial_pool_size == 0) {
+    }
+    else if (src_ctx->initial_pool_size == 0)
+    {
         return qsv_dynamic_frames_derive_to(dst_ctx, src_ctx, flags);
-    } else {
+    }
+    else
+    {
         return qsv_fixed_frames_derive_to(dst_ctx, src_ctx, flags);
     }
 }
@@ -2148,13 +2328,16 @@ static int qsv_fixed_pool_map_to(AVHWFramesContext *dst_ctx,
     AVQSVFramesContext *hwctx = dst_ctx->hwctx;
     int i, err, index = -1;
 
-    for (i = 0; i < hwctx->nb_surfaces && index < 0; i++) {
-        switch(src->format) {
+    for (i = 0; i < hwctx->nb_surfaces && index < 0; i++)
+    {
+        switch (src->format)
+        {
 #if CONFIG_VAAPI
         case AV_PIX_FMT_VAAPI:
         {
-            mfxHDLPair *pair = (mfxHDLPair*)hwctx->surfaces[i].Data.MemId;
-            if (*(VASurfaceID*)pair->first == (VASurfaceID)(uintptr_t)src->data[3]) {
+            mfxHDLPair *pair = (mfxHDLPair *)hwctx->surfaces[i].Data.MemId;
+            if (*(VASurfaceID *)pair->first == (VASurfaceID)(uintptr_t)src->data[3])
+            {
                 index = i;
                 break;
             }
@@ -2163,10 +2346,9 @@ static int qsv_fixed_pool_map_to(AVHWFramesContext *dst_ctx,
 #if CONFIG_D3D11VA
         case AV_PIX_FMT_D3D11:
         {
-            mfxHDLPair *pair = (mfxHDLPair*)hwctx->surfaces[i].Data.MemId;
-            if (pair->first == src->data[0]
-                && (pair->second == src->data[1]
-                    || (pair->second == (mfxMemId)MFX_INFINITE && src->data[1] == (uint8_t *)0))) {
+            mfxHDLPair *pair = (mfxHDLPair *)hwctx->surfaces[i].Data.MemId;
+            if (pair->first == src->data[0] && (pair->second == src->data[1] || (pair->second == (mfxMemId)MFX_INFINITE && src->data[1] == (uint8_t *)0)))
+            {
                 index = i;
                 break;
             }
@@ -2175,8 +2357,9 @@ static int qsv_fixed_pool_map_to(AVHWFramesContext *dst_ctx,
 #if CONFIG_DXVA2
         case AV_PIX_FMT_DXVA2_VLD:
         {
-            mfxHDLPair *pair = (mfxHDLPair*)hwctx->surfaces[i].Data.MemId;
-            if (pair->first == src->data[3]) {
+            mfxHDLPair *pair = (mfxHDLPair *)hwctx->surfaces[i].Data.MemId;
+            if (pair->first == src->data[3])
+            {
                 index = i;
                 break;
             }
@@ -2184,9 +2367,10 @@ static int qsv_fixed_pool_map_to(AVHWFramesContext *dst_ctx,
 #endif
         }
     }
-    if (index < 0) {
+    if (index < 0)
+    {
         av_log(dst_ctx, AV_LOG_ERROR, "Trying to map from a surface which "
-               "is not in the mapped frames context.\n");
+                                      "is not in the mapped frames context.\n");
         return AVERROR(EINVAL);
     }
 
@@ -2195,9 +2379,9 @@ static int qsv_fixed_pool_map_to(AVHWFramesContext *dst_ctx,
     if (err)
         return err;
 
-    dst->width   = src->width;
-    dst->height  = src->height;
-    dst->data[3] = (uint8_t*)&hwctx->surfaces[index];
+    dst->width = src->width;
+    dst->height = src->height;
+    dst->data[3] = (uint8_t *)&hwctx->surfaces[index];
 
     return 0;
 }
@@ -2208,7 +2392,8 @@ static void qsv_dynamic_pool_unmap(AVHWFramesContext *ctx, HWMapDescriptor *hwma
     mfxHDLPair *handle_pairs_internal = (mfxHDLPair *)surfaces_internal->Data.MemId;
     AVHWFramesContext *src_ctx = (AVHWFramesContext *)ffhwframesctx(ctx)->source_frames->data;
 
-    switch (src_ctx->format) {
+    switch (src_ctx->format)
+    {
 #if CONFIG_VAAPI
     case AV_PIX_FMT_VAAPI:
     {
@@ -2242,13 +2427,15 @@ static int qsv_dynamic_pool_map_to(AVHWFramesContext *dst_ctx,
     int ret = 0;
 
     surfaces_internal = av_calloc(1, sizeof(*surfaces_internal));
-    if (!surfaces_internal) {
+    if (!surfaces_internal)
+    {
         ret = AVERROR(ENOMEM);
         goto fail;
     }
 
     handle_pairs_internal = av_calloc(1, sizeof(*handle_pairs_internal));
-    if (!handle_pairs_internal) {
+    if (!handle_pairs_internal)
+    {
         ret = AVERROR(ENOMEM);
         goto fail;
     }
@@ -2257,15 +2444,17 @@ static int qsv_dynamic_pool_map_to(AVHWFramesContext *dst_ctx,
     if (ret < 0)
         goto fail;
 
-    switch (src->format) {
+    switch (src->format)
+    {
 #if CONFIG_VAAPI
     case AV_PIX_FMT_VAAPI:
     {
         VASurfaceID *surface_id_internal;
 
         surface_id_internal = av_calloc(1, sizeof(*surface_id_internal));
-        if (!surface_id_internal) {
-            ret =AVERROR(ENOMEM);
+        if (!surface_id_internal)
+        {
+            ret = AVERROR(ENOMEM);
             goto fail;
         }
 
@@ -2280,14 +2469,17 @@ static int qsv_dynamic_pool_map_to(AVHWFramesContext *dst_ctx,
 #if CONFIG_D3D11VA
     case AV_PIX_FMT_D3D11:
     {
-        AVHWFramesContext *src_ctx = (AVHWFramesContext*)src->hw_frames_ctx->data;
+        AVHWFramesContext *src_ctx = (AVHWFramesContext *)src->hw_frames_ctx->data;
         AVD3D11VAFramesContext *src_hwctx = src_ctx->hwctx;
 
         handle_pairs_internal->first = (mfxMemId)src->data[0];
 
-        if (src_hwctx->BindFlags & D3D11_BIND_RENDER_TARGET) {
+        if (src_hwctx->BindFlags & D3D11_BIND_RENDER_TARGET)
+        {
             handle_pairs_internal->second = (mfxMemId)MFX_INFINITE;
-        } else {
+        }
+        else
+        {
             handle_pairs_internal->second = (mfxMemId)src->data[1];
         }
 
@@ -2306,9 +2498,9 @@ static int qsv_dynamic_pool_map_to(AVHWFramesContext *dst_ctx,
     if (ret)
         goto fail;
 
-    dst->width   = src->width;
-    dst->height  = src->height;
-    dst->data[3] = (uint8_t*)surfaces_internal;
+    dst->width = src->width;
+    dst->height = src->height;
+    dst->data[3] = (uint8_t *)surfaces_internal;
 
     return 0;
 
@@ -2357,7 +2549,7 @@ static int qsv_frames_get_constraints(AVHWDeviceContext *ctx,
 static void qsv_device_free(AVHWDeviceContext *ctx)
 {
     AVQSVDeviceContext *hwctx = ctx->hwctx;
-    QSVDevicePriv       *priv = ctx->user_opaque;
+    QSVDevicePriv *priv = ctx->user_opaque;
 
     if (hwctx->session)
         MFXClose(hwctx->session);
@@ -2370,26 +2562,29 @@ static void qsv_device_free(AVHWDeviceContext *ctx)
 
 static mfxIMPL choose_implementation(const char *device, enum AVHWDeviceType child_device_type)
 {
-    static const struct {
+    static const struct
+    {
         const char *name;
-        mfxIMPL     impl;
+        mfxIMPL impl;
     } impl_map[] = {
-        { "auto",     MFX_IMPL_AUTO         },
-        { "sw",       MFX_IMPL_SOFTWARE     },
-        { "hw",       MFX_IMPL_HARDWARE     },
-        { "auto_any", MFX_IMPL_AUTO_ANY     },
-        { "hw_any",   MFX_IMPL_HARDWARE_ANY },
-        { "hw2",      MFX_IMPL_HARDWARE2    },
-        { "hw3",      MFX_IMPL_HARDWARE3    },
-        { "hw4",      MFX_IMPL_HARDWARE4    },
+        {"auto", MFX_IMPL_AUTO},
+        {"sw", MFX_IMPL_SOFTWARE},
+        {"hw", MFX_IMPL_HARDWARE},
+        {"auto_any", MFX_IMPL_AUTO_ANY},
+        {"hw_any", MFX_IMPL_HARDWARE_ANY},
+        {"hw2", MFX_IMPL_HARDWARE2},
+        {"hw3", MFX_IMPL_HARDWARE3},
+        {"hw4", MFX_IMPL_HARDWARE4},
     };
 
     mfxIMPL impl = MFX_IMPL_AUTO_ANY;
     int i;
 
-    if (device) {
+    if (device)
+    {
         for (i = 0; i < FF_ARRAY_ELEMS(impl_map); i++)
-            if (!strcmp(device, impl_map[i].name)) {
+            if (!strcmp(device, impl_map[i].name))
+            {
                 impl = impl_map[i].impl;
                 break;
             }
@@ -2397,7 +2592,8 @@ static mfxIMPL choose_implementation(const char *device, enum AVHWDeviceType chi
             impl = strtol(device, NULL, 0);
     }
 
-    if (impl != MFX_IMPL_SOFTWARE) {
+    if (impl != MFX_IMPL_SOFTWARE)
+    {
         if (child_device_type == AV_HWDEVICE_TYPE_D3D11VA)
             impl |= MFX_IMPL_VIA_D3D11;
         else if (child_device_type == AV_HWDEVICE_TYPE_DXVA2)
@@ -2414,39 +2610,40 @@ static int qsv_device_derive_from_child(AVHWDeviceContext *ctx,
 {
     AVQSVDeviceContext *hwctx = ctx->hwctx;
 
-    mfxVersion    ver = { { 3, 1 } };
-    mfxHDL        handle;
+    mfxVersion ver = {{3, 1}};
+    mfxHDL handle;
     mfxHandleType handle_type;
-    mfxStatus     err;
+    mfxStatus err;
     int ret;
 
-    switch (child_device_ctx->type) {
+    switch (child_device_ctx->type)
+    {
 #if CONFIG_VAAPI
     case AV_HWDEVICE_TYPE_VAAPI:
-        {
-            AVVAAPIDeviceContext *child_device_hwctx = child_device_ctx->hwctx;
-            handle_type = MFX_HANDLE_VA_DISPLAY;
-            handle = (mfxHDL)child_device_hwctx->display;
-        }
-        break;
+    {
+        AVVAAPIDeviceContext *child_device_hwctx = child_device_ctx->hwctx;
+        handle_type = MFX_HANDLE_VA_DISPLAY;
+        handle = (mfxHDL)child_device_hwctx->display;
+    }
+    break;
 #endif
 #if CONFIG_D3D11VA
     case AV_HWDEVICE_TYPE_D3D11VA:
-        {
-            AVD3D11VADeviceContext *child_device_hwctx = child_device_ctx->hwctx;
-            handle_type = MFX_HANDLE_D3D11_DEVICE;
-            handle = (mfxHDL)child_device_hwctx->device;
-        }
-        break;
+    {
+        AVD3D11VADeviceContext *child_device_hwctx = child_device_ctx->hwctx;
+        handle_type = MFX_HANDLE_D3D11_DEVICE;
+        handle = (mfxHDL)child_device_hwctx->device;
+    }
+    break;
 #endif
 #if CONFIG_DXVA2
     case AV_HWDEVICE_TYPE_DXVA2:
-        {
-            AVDXVA2DeviceContext *child_device_hwctx = child_device_ctx->hwctx;
-            handle_type = MFX_HANDLE_D3D9_DEVICE_MANAGER;
-            handle = (mfxHDL)child_device_hwctx->devmgr;
-        }
-        break;
+    {
+        AVDXVA2DeviceContext *child_device_hwctx = child_device_ctx->hwctx;
+        handle_type = MFX_HANDLE_D3D9_DEVICE_MANAGER;
+        handle = (mfxHDL)child_device_hwctx->devmgr;
+    }
+    break;
 #endif
     default:
         ret = AVERROR(ENOSYS);
@@ -2459,9 +2656,11 @@ static int qsv_device_derive_from_child(AVHWDeviceContext *ctx,
         goto fail;
 
     err = MFXVideoCORE_SetHandle(hwctx->session, handle_type, handle);
-    if (err != MFX_ERR_NONE) {
+    if (err != MFX_ERR_NONE)
+    {
         av_log(ctx, AV_LOG_ERROR, "Error setting child device handle: "
-               "%d\n", err);
+                                  "%d\n",
+               err);
         ret = AVERROR_UNKNOWN;
         goto fail;
     }
@@ -2516,38 +2715,53 @@ static int qsv_device_create(AVHWDeviceContext *ctx, const char *device,
         return AVERROR(ENOMEM);
 
     ctx->user_opaque = priv;
-    ctx->free        = qsv_device_free;
+    ctx->free = qsv_device_free;
 
     e = av_dict_get(opts, "child_device_type", NULL, 0);
-    if (e) {
+    if (e)
+    {
         child_device_type = av_hwdevice_find_type_by_name(e->value);
-        if (child_device_type == AV_HWDEVICE_TYPE_NONE) {
+        if (child_device_type == AV_HWDEVICE_TYPE_NONE)
+        {
             av_log(ctx, AV_LOG_ERROR, "Unknown child device type "
-                   "\"%s\".\n", e->value);
+                                      "\"%s\".\n",
+                   e->value);
             return AVERROR(EINVAL);
         }
 #if QSV_ONEVPL
-    } else if (CONFIG_D3D11VA) {  // Use D3D11 by default if d3d11va is enabled
+    }
+    else if (CONFIG_D3D11VA)
+    { // Use D3D11 by default if d3d11va is enabled
         av_log(ctx, AV_LOG_VERBOSE,
                "Defaulting child_device_type to AV_HWDEVICE_TYPE_D3D11VA for oneVPL."
                "Please explicitly set child device type via \"-init_hw_device\" "
                "option if needed.\n");
         child_device_type = AV_HWDEVICE_TYPE_D3D11VA;
-    } else if (CONFIG_DXVA2) {
+    }
+    else if (CONFIG_DXVA2)
+    {
         child_device_type = AV_HWDEVICE_TYPE_DXVA2;
 #else
-    } else if (CONFIG_DXVA2) {
+    }
+    else if (CONFIG_DXVA2)
+    {
         av_log(NULL, AV_LOG_WARNING,
-                "WARNING: defaulting child_device_type to AV_HWDEVICE_TYPE_DXVA2 for compatibility "
-                "with old commandlines. This behaviour will be removed "
-                "in the future. Please explicitly set device type via \"-init_hw_device\" option.\n");
+               "WARNING: defaulting child_device_type to AV_HWDEVICE_TYPE_DXVA2 for compatibility "
+               "with old commandlines. This behaviour will be removed "
+               "in the future. Please explicitly set device type via \"-init_hw_device\" option.\n");
         child_device_type = AV_HWDEVICE_TYPE_DXVA2;
-    } else if (CONFIG_D3D11VA) {
+    }
+    else if (CONFIG_D3D11VA)
+    {
         child_device_type = AV_HWDEVICE_TYPE_D3D11VA;
 #endif
-    } else if (CONFIG_VAAPI) {
+    }
+    else if (CONFIG_VAAPI)
+    {
         child_device_type = AV_HWDEVICE_TYPE_VAAPI;
-    } else {
+    }
+    else
+    {
         av_log(ctx, AV_LOG_ERROR, "No supported child device type is enabled\n");
         return AVERROR(ENOSYS);
     }
@@ -2555,55 +2769,58 @@ static int qsv_device_create(AVHWDeviceContext *ctx, const char *device,
 #if CONFIG_VAAPI && defined(_WIN32)
     /* AV_HWDEVICE_TYPE_VAAPI on Windows/Libva-win32 not supported */
     /* Reject user specified child_device_type or CONFIG_VAAPI on Windows */
-    if (child_device_type == AV_HWDEVICE_TYPE_VAAPI) {
+    if (child_device_type == AV_HWDEVICE_TYPE_VAAPI)
+    {
         av_log(ctx, AV_LOG_ERROR, "VAAPI child device type not supported for oneVPL on Windows"
-                "\"%s\".\n", e->value);
+                                  "\"%s\".\n",
+               e->value);
         return AVERROR(EINVAL);
     }
 #endif
 
     child_device_opts = NULL;
-    switch (child_device_type) {
+    switch (child_device_type)
+    {
 #if CONFIG_VAAPI
     case AV_HWDEVICE_TYPE_VAAPI:
-        {
-            // libmfx does not actually implement VAAPI properly, rather it
-            // depends on the specific behaviour of a matching iHD driver when
-            // used on recent Intel hardware.  Set options to the VAAPI device
-            // creation so that we should pick a usable setup by default if
-            // possible, even when multiple devices and drivers are available.
-            av_dict_set(&child_device_opts, "kernel_driver", "i915", 0);
-            av_dict_set(&child_device_opts, "driver",        "iHD",  0);
-        }
-        break;
+    {
+        // libmfx does not actually implement VAAPI properly, rather it
+        // depends on the specific behaviour of a matching iHD driver when
+        // used on recent Intel hardware.  Set options to the VAAPI device
+        // creation so that we should pick a usable setup by default if
+        // possible, even when multiple devices and drivers are available.
+        av_dict_set(&child_device_opts, "kernel_driver", "i915", 0);
+        av_dict_set(&child_device_opts, "driver", "iHD", 0);
+    }
+    break;
 #endif
 #if CONFIG_D3D11VA
     case AV_HWDEVICE_TYPE_D3D11VA:
-        {
-            // Make sure the hardware vendor is Intel when multiple devices are
-            // available, it will be ignored if user specifies the child device
-            // explicitly
-            av_dict_set(&child_device_opts, "vendor_id",        "0x8086",  0);
-        }
-        break;
+    {
+        // Make sure the hardware vendor is Intel when multiple devices are
+        // available, it will be ignored if user specifies the child device
+        // explicitly
+        av_dict_set(&child_device_opts, "vendor_id", "0x8086", 0);
+    }
+    break;
 #endif
 #if CONFIG_DXVA2
     case AV_HWDEVICE_TYPE_DXVA2:
 #if QSV_ONEVPL
-        {
-            av_log(ctx, AV_LOG_VERBOSE,
-                   "d3d11va is not available or child device type is set to dxva2 "
-                   "explicitly for oneVPL.\n");
-        }
+    {
+        av_log(ctx, AV_LOG_VERBOSE,
+               "d3d11va is not available or child device type is set to dxva2 "
+               "explicitly for oneVPL.\n");
+    }
 #endif
-        break;
+    break;
 #endif
     default:
-        {
-            av_log(ctx, AV_LOG_ERROR, "No supported child device type is enabled\n");
-            return AVERROR(ENOSYS);
-        }
-        break;
+    {
+        av_log(ctx, AV_LOG_ERROR, "No supported child device type is enabled\n");
+        return AVERROR(ENOSYS);
+    }
+    break;
     }
 
     e = av_dict_get(opts, "child_device", NULL, 0);
@@ -2614,7 +2831,7 @@ static int qsv_device_create(AVHWDeviceContext *ctx, const char *device,
     if (ret < 0)
         return ret;
 
-    child_device = (AVHWDeviceContext*)priv->child_device_ctx->data;
+    child_device = (AVHWDeviceContext *)priv->child_device_ctx->data;
 
     impl = choose_implementation(device, child_device_type);
 
@@ -2622,26 +2839,26 @@ static int qsv_device_create(AVHWDeviceContext *ctx, const char *device,
 }
 
 const HWContextType ff_hwcontext_type_qsv = {
-    .type                   = AV_HWDEVICE_TYPE_QSV,
-    .name                   = "QSV",
+    .type = AV_HWDEVICE_TYPE_QSV,
+    .name = "QSV",
 
-    .device_hwctx_size      = sizeof(QSVDeviceContext),
-    .frames_hwctx_size      = sizeof(QSVFramesContext),
+    .device_hwctx_size = sizeof(QSVDeviceContext),
+    .frames_hwctx_size = sizeof(QSVFramesContext),
 
-    .device_create          = qsv_device_create,
-    .device_derive          = qsv_device_derive,
-    .device_init            = qsv_device_init,
+    .device_create = qsv_device_create,
+    .device_derive = qsv_device_derive,
+    .device_init = qsv_device_init,
     .frames_get_constraints = qsv_frames_get_constraints,
-    .frames_init            = qsv_frames_init,
-    .frames_uninit          = qsv_frames_uninit,
-    .frames_get_buffer      = qsv_get_buffer,
-    .transfer_get_formats   = qsv_transfer_get_formats,
-    .transfer_data_to       = qsv_transfer_data_to,
-    .transfer_data_from     = qsv_transfer_data_from,
-    .map_to                 = qsv_map_to,
-    .map_from               = qsv_map_from,
-    .frames_derive_to       = qsv_frames_derive_to,
-    .frames_derive_from     = qsv_frames_derive_from,
+    .frames_init = qsv_frames_init,
+    .frames_uninit = qsv_frames_uninit,
+    .frames_get_buffer = qsv_get_buffer,
+    .transfer_get_formats = qsv_transfer_get_formats,
+    .transfer_data_to = qsv_transfer_data_to,
+    .transfer_data_from = qsv_transfer_data_from,
+    .map_to = qsv_map_to,
+    .map_from = qsv_map_from,
+    .frames_derive_to = qsv_frames_derive_to,
+    .frames_derive_from = qsv_frames_derive_from,
 
-    .pix_fmts = (const enum AVPixelFormat[]){ AV_PIX_FMT_QSV, AV_PIX_FMT_NONE },
+    .pix_fmts = (const enum AVPixelFormat[]){AV_PIX_FMT_QSV, AV_PIX_FMT_NONE},
 };

@@ -21,7 +21,7 @@
 #include <limits.h>
 #include <stdatomic.h>
 
-#include "pthread_internal.h"
+#include "// pthread_internal.h"
 #include "threadprogress.h"
 #include "libavutil/attributes.h"
 #include "libavutil/thread.h"
@@ -35,16 +35,16 @@ av_cold int ff_thread_progress_init(ThreadProgress *pro, int init_mode)
     atomic_init(&pro->progress, init_mode ? -1 : INT_MAX);
 #if HAVE_THREADS
     if (init_mode)
-        return ff_pthread_init(pro, thread_progress_offsets);
+        return ff_ // pthread_init(pro, thread_progress_offsets);
 #endif
-    pro->init = init_mode;
+                   pro->init = init_mode;
     return 0;
 }
 
 av_cold void ff_thread_progress_destroy(ThreadProgress *pro)
 {
 #if HAVE_THREADS
-    ff_pthread_free(pro, thread_progress_offsets);
+    ff_ // pthread_free(pro, thread_progress_offsets);
 #else
     pro->init = 0;
 #endif
@@ -67,7 +67,7 @@ void ff_thread_progress_await(const ThreadProgress *pro_c, int n)
     /* Casting const away here is safe, because we only read from progress
      * and will leave pro_c in the same state upon leaving the function
      * as it had at the beginning. */
-    ThreadProgress *pro = (ThreadProgress*)pro_c;
+    ThreadProgress *pro = (ThreadProgress *)pro_c;
 
     if (atomic_load_explicit(&pro->progress, memory_order_acquire) >= n)
         return;

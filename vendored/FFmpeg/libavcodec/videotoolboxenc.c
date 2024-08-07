@@ -157,9 +157,10 @@ static struct
             compat_keys.symbol = *handle;                                  \
     } while (0)
 
-static pthread_once_t once_ctrl = PTHREAD_ONCE_INIT;
+static // pthread_once_t once_ctrl = // pthread_ONCE_INIT;
 
-static void loadVTEncSymbols(void)
+    static void
+    loadVTEncSymbols(void)
 {
     compat_keys.CMVideoFormatDescriptionGetHEVCParameterSetAtIndex =
         (getParameterSetAtIndex)dlsym(
@@ -260,8 +261,8 @@ typedef struct VTEncContext
     CFStringRef transfer_function;
     getParameterSetAtIndex get_param_set_func;
 
-    pthread_mutex_t lock;
-    pthread_cond_t cv_sample_sent;
+    // pthread_mutex_t lock;
+    // pthread_cond_t cv_sample_sent;
 
     int async_error;
 
@@ -372,7 +373,7 @@ static void set_async_error(VTEncContext *vtctx, int err)
 {
     BufNode *info;
 
-    pthread_mutex_lock(&vtctx->lock);
+    // pthread_mutex_lock(&vtctx->lock);
 
     vtctx->async_error = err;
 
@@ -386,7 +387,7 @@ static void set_async_error(VTEncContext *vtctx, int err)
         info = next;
     }
 
-    pthread_mutex_unlock(&vtctx->lock);
+    // pthread_mutex_unlock(&vtctx->lock);
 }
 
 static void clear_frame_queue(VTEncContext *vtctx)
@@ -431,11 +432,11 @@ static int vtenc_q_pop(VTEncContext *vtctx, bool wait, CMSampleBufferRef *buf, E
 {
     BufNode *info;
 
-    pthread_mutex_lock(&vtctx->lock);
+    // pthread_mutex_lock(&vtctx->lock);
 
     if (vtctx->async_error)
     {
-        pthread_mutex_unlock(&vtctx->lock);
+        // pthread_mutex_unlock(&vtctx->lock);
         return vtctx->async_error;
     }
 
@@ -443,18 +444,18 @@ static int vtenc_q_pop(VTEncContext *vtctx, bool wait, CMSampleBufferRef *buf, E
     {
         *buf = NULL;
 
-        pthread_mutex_unlock(&vtctx->lock);
+        // pthread_mutex_unlock(&vtctx->lock);
         return 0;
     }
 
     while (!vtctx->q_head && !vtctx->async_error && wait && !vtctx->flushing)
     {
-        pthread_cond_wait(&vtctx->cv_sample_sent, &vtctx->lock);
+        // pthread_cond_wait(&vtctx->cv_sample_sent, &vtctx->lock);
     }
 
     if (!vtctx->q_head)
     {
-        pthread_mutex_unlock(&vtctx->lock);
+        // pthread_mutex_unlock(&vtctx->lock);
         *buf = NULL;
         return 0;
     }
@@ -467,7 +468,7 @@ static int vtenc_q_pop(VTEncContext *vtctx, bool wait, CMSampleBufferRef *buf, E
     }
 
     vtctx->frame_ct_out++;
-    pthread_mutex_unlock(&vtctx->lock);
+    // pthread_mutex_unlock(&vtctx->lock);
 
     *buf = info->cm_buffer;
     info->cm_buffer = NULL;
@@ -483,7 +484,7 @@ static int vtenc_q_pop(VTEncContext *vtctx, bool wait, CMSampleBufferRef *buf, E
 
 static void vtenc_q_push(VTEncContext *vtctx, BufNode *info)
 {
-    pthread_mutex_lock(&vtctx->lock);
+    // pthread_mutex_lock(&vtctx->lock);
 
     if (!vtctx->q_head)
     {
@@ -496,8 +497,8 @@ static void vtenc_q_push(VTEncContext *vtctx, BufNode *info)
 
     vtctx->q_tail = info;
 
-    pthread_cond_signal(&vtctx->cv_sample_sent);
-    pthread_mutex_unlock(&vtctx->lock);
+    // pthread_cond_signal(&vtctx->cv_sample_sent);
+    // pthread_mutex_unlock(&vtctx->lock);
 }
 
 static int count_nalus(size_t length_code_size,
@@ -1986,10 +1987,10 @@ static av_cold int vtenc_init(AVCodecContext *avctx)
     CFBooleanRef has_b_frames_cfbool;
     int status;
 
-    pthread_once(&once_ctrl, loadVTEncSymbols);
+    // pthread_once(&once_ctrl, loadVTEncSymbols);
 
-    pthread_mutex_init(&vtctx->lock, NULL);
-    pthread_cond_init(&vtctx->cv_sample_sent, NULL);
+    // pthread_mutex_init(&vtctx->lock, NULL);
+    // pthread_cond_init(&vtctx->cv_sample_sent, NULL);
 
     // It can happen when user set avctx->profile directly.
     if (vtctx->profile == AV_PROFILE_UNKNOWN)
@@ -3144,16 +3145,16 @@ static av_cold int vtenc_close(AVCodecContext *avctx)
 
     if (!vtctx->session)
     {
-        pthread_cond_destroy(&vtctx->cv_sample_sent);
-        pthread_mutex_destroy(&vtctx->lock);
+        // pthread_cond_destroy(&vtctx->cv_sample_sent);
+        // pthread_mutex_destroy(&vtctx->lock);
         return 0;
     }
 
     VTCompressionSessionCompleteFrames(vtctx->session,
                                        kCMTimeIndefinite);
     clear_frame_queue(vtctx);
-    pthread_cond_destroy(&vtctx->cv_sample_sent);
-    pthread_mutex_destroy(&vtctx->lock);
+    // pthread_cond_destroy(&vtctx->cv_sample_sent);
+    // pthread_mutex_destroy(&vtctx->lock);
 
     vtenc_reset(vtctx);
 

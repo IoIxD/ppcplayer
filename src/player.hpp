@@ -48,20 +48,10 @@ namespace player
         float widthDiff;
         float heightDiff;
 
-        // Returns the time to wait after a decoding, in microseconds.
+        // Returns the time to wait after a decoding, in milliseconds.
         float framerate()
         {
-            auto fr = videoCodecCtx->framerate;
-            if (fr.num == 0 || fr.den == 0)
-            {
-                fr = videoStream->avg_frame_rate;
-                float framerate = (int)round((float)fr.num / (float)fr.den);
-                return (1.0 / (float)framerate) * 1000000.0;
-            }
-            else
-            {
-                return (1.0 / ((float)fr.num / 1000.0)) * 1000000.0;
-            }
+            return this->videoCodecCtx->framerate.num;
         }
 
         AVFrame *pRGBFrame = NULL;

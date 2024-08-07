@@ -34,20 +34,22 @@
 #include "ffjni.h"
 
 static JavaVM *java_vm;
-static pthread_key_t current_env;
-static pthread_once_t once = PTHREAD_ONCE_INIT;
-static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+static     // pthread_key_t current_env;
+    static // pthread_once_t once = // pthread_ONCE_INIT;
+    static // pthread_mutex_t lock = // pthread_MUTEX_INITIALIZER;
 
-static void jni_detach_env(void *data)
+    static void
+    jni_detach_env(void *data)
 {
-    if (java_vm) {
+    if (java_vm)
+    {
         (*java_vm)->DetachCurrentThread(java_vm);
     }
 }
 
-static void jni_create_pthread_key(void)
+static void jni_create_ // pthread_key(void)
 {
-    pthread_key_create(&current_env, jni_detach_env);
+    // pthread_key_create(&current_env, jni_detach_env);
 }
 
 JNIEnv *ff_jni_get_env(void *log_ctx)
@@ -55,44 +57,50 @@ JNIEnv *ff_jni_get_env(void *log_ctx)
     int ret = 0;
     JNIEnv *env = NULL;
 
-    pthread_mutex_lock(&lock);
-    if (java_vm == NULL) {
+    // pthread_mutex_lock(&lock);
+    if (java_vm == NULL)
+    {
         java_vm = av_jni_get_java_vm(log_ctx);
     }
 
-    if (!java_vm) {
+    if (!java_vm)
+    {
         av_log(log_ctx, AV_LOG_ERROR, "No Java virtual machine has been registered\n");
         goto done;
     }
 
-    pthread_once(&once, jni_create_pthread_key);
+    // pthread_once(&once, jni_create_// pthread_key);
 
-    if ((env = pthread_getspecific(current_env)) != NULL) {
+    if ((env = // pthread_getspecific(current_env)) != NULL) {
         goto done;
-    }
+}
 
-    ret = (*java_vm)->GetEnv(java_vm, (void **)&env, JNI_VERSION_1_6);
-    switch(ret) {
-    case JNI_EDETACHED:
-        if ((*java_vm)->AttachCurrentThread(java_vm, &env, NULL) != 0) {
-            av_log(log_ctx, AV_LOG_ERROR, "Failed to attach the JNI environment to the current thread\n");
-            env = NULL;
-        } else {
-            pthread_setspecific(current_env, env);
-        }
-        break;
-    case JNI_OK:
-        break;
-    case JNI_EVERSION:
-        av_log(log_ctx, AV_LOG_ERROR, "The specified JNI version is not supported\n");
-        break;
-    default:
-        av_log(log_ctx, AV_LOG_ERROR, "Failed to get the JNI environment attached to this thread\n");
-        break;
+ret = (*java_vm)->GetEnv(java_vm, (void **)&env, JNI_VERSION_1_6);
+switch (ret)
+{
+case JNI_EDETACHED:
+    if ((*java_vm)->AttachCurrentThread(java_vm, &env, NULL) != 0)
+    {
+        av_log(log_ctx, AV_LOG_ERROR, "Failed to attach the JNI environment to the current thread\n");
+        env = NULL;
     }
+    else
+    {
+        // pthread_setspecific(current_env, env);
+    }
+    break;
+case JNI_OK:
+    break;
+case JNI_EVERSION:
+    av_log(log_ctx, AV_LOG_ERROR, "The specified JNI version is not supported\n");
+    break;
+default:
+    av_log(log_ctx, AV_LOG_ERROR, "Failed to get the JNI environment attached to this thread\n");
+    break;
+}
 
-done:
-    pthread_mutex_unlock(&lock);
+done :
+    // pthread_mutex_unlock(&lock);
     return env;
 }
 
@@ -103,12 +111,14 @@ char *ff_jni_jstring_to_utf_chars(JNIEnv *env, jstring string, void *log_ctx)
 
     jboolean copy = 0;
 
-    if (!string) {
+    if (!string)
+    {
         return NULL;
     }
 
     utf_chars = (*env)->GetStringUTFChars(env, string, &copy);
-    if ((*env)->ExceptionCheck(env)) {
+    if ((*env)->ExceptionCheck(env))
+    {
         (*env)->ExceptionClear(env);
         av_log(log_ctx, AV_LOG_ERROR, "String.getStringUTFChars() threw an exception\n");
         return NULL;
@@ -117,7 +127,8 @@ char *ff_jni_jstring_to_utf_chars(JNIEnv *env, jstring string, void *log_ctx)
     ret = av_strdup(utf_chars);
 
     (*env)->ReleaseStringUTFChars(env, string, utf_chars);
-    if ((*env)->ExceptionCheck(env)) {
+    if ((*env)->ExceptionCheck(env))
+    {
         (*env)->ExceptionClear(env);
         av_log(log_ctx, AV_LOG_ERROR, "String.releaseStringUTFChars() threw an exception\n");
         return NULL;
@@ -131,7 +142,8 @@ jstring ff_jni_utf_chars_to_jstring(JNIEnv *env, const char *utf_chars, void *lo
     jstring ret;
 
     ret = (*env)->NewStringUTF(env, utf_chars);
-    if ((*env)->ExceptionCheck(env)) {
+    if ((*env)->ExceptionCheck(env))
+    {
         (*env)->ExceptionClear(env);
         av_log(log_ctx, AV_LOG_ERROR, "NewStringUTF() threw an exception\n");
         return NULL;
@@ -160,7 +172,8 @@ int ff_jni_exception_get_summary(JNIEnv *env, jthrowable exception, char **error
     av_bprint_init(&bp, 0, AV_BPRINT_SIZE_AUTOMATIC);
 
     exception_class = (*env)->GetObjectClass(env, exception);
-    if ((*env)->ExceptionCheck(env)) {
+    if ((*env)->ExceptionCheck(env))
+    {
         (*env)->ExceptionClear(env);
         av_log(log_ctx, AV_LOG_ERROR, "Could not find Throwable class\n");
         ret = AVERROR_EXTERNAL;
@@ -168,7 +181,8 @@ int ff_jni_exception_get_summary(JNIEnv *env, jthrowable exception, char **error
     }
 
     class_class = (*env)->GetObjectClass(env, exception_class);
-    if ((*env)->ExceptionCheck(env)) {
+    if ((*env)->ExceptionCheck(env))
+    {
         (*env)->ExceptionClear(env);
         av_log(log_ctx, AV_LOG_ERROR, "Could not find Throwable class's class\n");
         ret = AVERROR_EXTERNAL;
@@ -176,7 +190,8 @@ int ff_jni_exception_get_summary(JNIEnv *env, jthrowable exception, char **error
     }
 
     get_name_id = (*env)->GetMethodID(env, class_class, "getName", "()Ljava/lang/String;");
-    if ((*env)->ExceptionCheck(env)) {
+    if ((*env)->ExceptionCheck(env))
+    {
         (*env)->ExceptionClear(env);
         av_log(log_ctx, AV_LOG_ERROR, "Could not find method Class.getName()\n");
         ret = AVERROR_EXTERNAL;
@@ -184,21 +199,24 @@ int ff_jni_exception_get_summary(JNIEnv *env, jthrowable exception, char **error
     }
 
     string = (*env)->CallObjectMethod(env, exception_class, get_name_id);
-    if ((*env)->ExceptionCheck(env)) {
+    if ((*env)->ExceptionCheck(env))
+    {
         (*env)->ExceptionClear(env);
         av_log(log_ctx, AV_LOG_ERROR, "Class.getName() threw an exception\n");
         ret = AVERROR_EXTERNAL;
         goto done;
     }
 
-    if (string) {
+    if (string)
+    {
         name = ff_jni_jstring_to_utf_chars(env, string, log_ctx);
         (*env)->DeleteLocalRef(env, string);
         string = NULL;
     }
 
     get_message_id = (*env)->GetMethodID(env, exception_class, "getMessage", "()Ljava/lang/String;");
-    if ((*env)->ExceptionCheck(env)) {
+    if ((*env)->ExceptionCheck(env))
+    {
         (*env)->ExceptionClear(env);
         av_log(log_ctx, AV_LOG_ERROR, "Could not find method java/lang/Throwable.getMessage()\n");
         ret = AVERROR_EXTERNAL;
@@ -206,26 +224,35 @@ int ff_jni_exception_get_summary(JNIEnv *env, jthrowable exception, char **error
     }
 
     string = (*env)->CallObjectMethod(env, exception, get_message_id);
-    if ((*env)->ExceptionCheck(env)) {
+    if ((*env)->ExceptionCheck(env))
+    {
         (*env)->ExceptionClear(env);
         av_log(log_ctx, AV_LOG_ERROR, "Throwable.getMessage() threw an exception\n");
         ret = AVERROR_EXTERNAL;
         goto done;
     }
 
-    if (string) {
+    if (string)
+    {
         message = ff_jni_jstring_to_utf_chars(env, string, log_ctx);
         (*env)->DeleteLocalRef(env, string);
         string = NULL;
     }
 
-    if (name && message) {
+    if (name && message)
+    {
         av_bprintf(&bp, "%s: %s", name, message);
-    } else if (name && !message) {
+    }
+    else if (name && !message)
+    {
         av_bprintf(&bp, "%s occurred", name);
-    } else if (!name && message) {
+    }
+    else if (!name && message)
+    {
         av_bprintf(&bp, "Exception: %s", message);
-    } else {
+    }
+    else
+    {
         av_log(log_ctx, AV_LOG_WARNING, "Could not retrieve exception name and message\n");
         av_bprintf(&bp, "Exception occurred");
     }
@@ -251,11 +278,13 @@ int ff_jni_exception_check(JNIEnv *env, int log, void *log_ctx)
 
     char *message = NULL;
 
-    if (!(*(env))->ExceptionCheck((env))) {
+    if (!(*(env))->ExceptionCheck((env)))
+    {
         return 0;
     }
 
-    if (!log) {
+    if (!log)
+    {
         (*(env))->ExceptionClear((env));
         return -1;
     }
@@ -263,7 +292,8 @@ int ff_jni_exception_check(JNIEnv *env, int log, void *log_ctx)
     exception = (*env)->ExceptionOccurred(env);
     (*(env))->ExceptionClear((env));
 
-    if ((ret = ff_jni_exception_get_summary(env, exception, &message, log_ctx)) < 0) {
+    if ((ret = ff_jni_exception_get_summary(env, exception, &message, log_ctx)) < 0)
+    {
         (*env)->DeleteLocalRef(env, exception);
         return ret;
     }
@@ -281,69 +311,84 @@ int ff_jni_init_jfields(JNIEnv *env, void *jfields, const struct FFJniField *jfi
     int i, ret = 0;
     jclass last_clazz = NULL;
 
-    for (i = 0; jfields_mapping[i].name; i++) {
+    for (i = 0; jfields_mapping[i].name; i++)
+    {
         int mandatory = jfields_mapping[i].mandatory;
         enum FFJniFieldType type = jfields_mapping[i].type;
 
-        if (type == FF_JNI_CLASS) {
+        if (type == FF_JNI_CLASS)
+        {
             jclass clazz;
 
             last_clazz = NULL;
 
             clazz = (*env)->FindClass(env, jfields_mapping[i].name);
-            if ((ret = ff_jni_exception_check(env, mandatory, log_ctx)) < 0 && mandatory) {
+            if ((ret = ff_jni_exception_check(env, mandatory, log_ctx)) < 0 && mandatory)
+            {
                 goto done;
             }
 
-            last_clazz = *(jclass*)((uint8_t*)jfields + jfields_mapping[i].offset) =
-                    global ? (*env)->NewGlobalRef(env, clazz) : clazz;
+            last_clazz = *(jclass *)((uint8_t *)jfields + jfields_mapping[i].offset) =
+                global ? (*env)->NewGlobalRef(env, clazz) : clazz;
 
-            if (global) {
+            if (global)
+            {
                 (*env)->DeleteLocalRef(env, clazz);
             }
+        }
+        else
+        {
 
-        } else {
-
-            if (!last_clazz) {
+            if (!last_clazz)
+            {
                 ret = AVERROR_EXTERNAL;
                 break;
             }
 
-            switch(type) {
-            case FF_JNI_FIELD: {
+            switch (type)
+            {
+            case FF_JNI_FIELD:
+            {
                 jfieldID field_id = (*env)->GetFieldID(env, last_clazz, jfields_mapping[i].method, jfields_mapping[i].signature);
-                if ((ret = ff_jni_exception_check(env, mandatory, log_ctx)) < 0 && mandatory) {
+                if ((ret = ff_jni_exception_check(env, mandatory, log_ctx)) < 0 && mandatory)
+                {
                     goto done;
                 }
 
-                *(jfieldID*)((uint8_t*)jfields + jfields_mapping[i].offset) = field_id;
+                *(jfieldID *)((uint8_t *)jfields + jfields_mapping[i].offset) = field_id;
                 break;
             }
-            case FF_JNI_STATIC_FIELD: {
+            case FF_JNI_STATIC_FIELD:
+            {
                 jfieldID field_id = (*env)->GetStaticFieldID(env, last_clazz, jfields_mapping[i].method, jfields_mapping[i].signature);
-                if ((ret = ff_jni_exception_check(env, mandatory, log_ctx)) < 0 && mandatory) {
+                if ((ret = ff_jni_exception_check(env, mandatory, log_ctx)) < 0 && mandatory)
+                {
                     goto done;
                 }
 
-                *(jfieldID*)((uint8_t*)jfields + jfields_mapping[i].offset) = field_id;
+                *(jfieldID *)((uint8_t *)jfields + jfields_mapping[i].offset) = field_id;
                 break;
             }
-            case FF_JNI_METHOD: {
+            case FF_JNI_METHOD:
+            {
                 jmethodID method_id = (*env)->GetMethodID(env, last_clazz, jfields_mapping[i].method, jfields_mapping[i].signature);
-                if ((ret = ff_jni_exception_check(env, mandatory, log_ctx)) < 0 && mandatory) {
+                if ((ret = ff_jni_exception_check(env, mandatory, log_ctx)) < 0 && mandatory)
+                {
                     goto done;
                 }
 
-                *(jmethodID*)((uint8_t*)jfields + jfields_mapping[i].offset) = method_id;
+                *(jmethodID *)((uint8_t *)jfields + jfields_mapping[i].offset) = method_id;
                 break;
             }
-            case FF_JNI_STATIC_METHOD: {
+            case FF_JNI_STATIC_METHOD:
+            {
                 jmethodID method_id = (*env)->GetStaticMethodID(env, last_clazz, jfields_mapping[i].method, jfields_mapping[i].signature);
-                if ((ret = ff_jni_exception_check(env, mandatory, log_ctx)) < 0 && mandatory) {
+                if ((ret = ff_jni_exception_check(env, mandatory, log_ctx)) < 0 && mandatory)
+                {
                     goto done;
                 }
 
-                *(jmethodID*)((uint8_t*)jfields + jfields_mapping[i].offset) = method_id;
+                *(jmethodID *)((uint8_t *)jfields + jfields_mapping[i].offset) = method_id;
                 break;
             }
             default:
@@ -357,7 +402,8 @@ int ff_jni_init_jfields(JNIEnv *env, void *jfields, const struct FFJniField *jfi
     }
 
 done:
-    if (ret < 0) {
+    if (ret < 0)
+    {
         /* reset jfields in case of failure so it does not leak references */
         ff_jni_reset_jfields(env, jfields, jfields_mapping, global, log_ctx);
     }
@@ -369,38 +415,48 @@ int ff_jni_reset_jfields(JNIEnv *env, void *jfields, const struct FFJniField *jf
 {
     int i;
 
-    for (i = 0; jfields_mapping[i].name; i++) {
+    for (i = 0; jfields_mapping[i].name; i++)
+    {
         enum FFJniFieldType type = jfields_mapping[i].type;
 
-        switch(type) {
-        case FF_JNI_CLASS: {
-            jclass clazz = *(jclass*)((uint8_t*)jfields + jfields_mapping[i].offset);
+        switch (type)
+        {
+        case FF_JNI_CLASS:
+        {
+            jclass clazz = *(jclass *)((uint8_t *)jfields + jfields_mapping[i].offset);
             if (!clazz)
                 continue;
 
-            if (global) {
+            if (global)
+            {
                 (*env)->DeleteGlobalRef(env, clazz);
-            } else {
+            }
+            else
+            {
                 (*env)->DeleteLocalRef(env, clazz);
             }
 
-            *(jclass*)((uint8_t*)jfields + jfields_mapping[i].offset) = NULL;
+            *(jclass *)((uint8_t *)jfields + jfields_mapping[i].offset) = NULL;
             break;
         }
-        case FF_JNI_FIELD: {
-            *(jfieldID*)((uint8_t*)jfields + jfields_mapping[i].offset) = NULL;
+        case FF_JNI_FIELD:
+        {
+            *(jfieldID *)((uint8_t *)jfields + jfields_mapping[i].offset) = NULL;
             break;
         }
-        case FF_JNI_STATIC_FIELD: {
-            *(jfieldID*)((uint8_t*)jfields + jfields_mapping[i].offset) = NULL;
+        case FF_JNI_STATIC_FIELD:
+        {
+            *(jfieldID *)((uint8_t *)jfields + jfields_mapping[i].offset) = NULL;
             break;
         }
-        case FF_JNI_METHOD: {
-            *(jmethodID*)((uint8_t*)jfields + jfields_mapping[i].offset) = NULL;
+        case FF_JNI_METHOD:
+        {
+            *(jmethodID *)((uint8_t *)jfields + jfields_mapping[i].offset) = NULL;
             break;
         }
-        case FF_JNI_STATIC_METHOD: {
-            *(jmethodID*)((uint8_t*)jfields + jfields_mapping[i].offset) = NULL;
+        case FF_JNI_STATIC_METHOD:
+        {
+            *(jmethodID *)((uint8_t *)jfields + jfields_mapping[i].offset) = NULL;
             break;
         }
         default:

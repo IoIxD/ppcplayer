@@ -40,7 +40,7 @@ typedef struct
     AVClass             *class;
 
     AudioQueueBufferRef buffer[2];
-    pthread_mutex_t     buffer_lock[2];
+    // pthread_mutex_t     buffer_lock[2];
     int                 cur_buf;
     AudioQueueRef       queue;
 
@@ -67,7 +67,7 @@ static void queue_callback(void* atctx, AudioQueueRef inAQ,
     ATContext *ctx = (ATContext*)atctx;
     for (int i = 0; i < 2; i++) {
         if (inBuffer == ctx->buffer[i]) {
-            pthread_mutex_unlock(&ctx->buffer_lock[i]);
+            // pthread_mutex_unlock(&ctx->buffer_lock[i]);
         }
     }
 }
@@ -229,8 +229,8 @@ static av_cold int at_write_header(AVFormatContext *avctx)
         return AVERROR(EINVAL);
 
     // init the mutexes for double-buffering
-    pthread_mutex_init(&ctx->buffer_lock[0], NULL);
-    pthread_mutex_init(&ctx->buffer_lock[1], NULL);
+    // pthread_mutex_init(&ctx->buffer_lock[0], NULL);
+    // pthread_mutex_init(&ctx->buffer_lock[1], NULL);
 
     return 0;
 }
@@ -245,13 +245,13 @@ static int at_write_packet(AVFormatContext *avctx, AVPacket *pkt)
 
     // lock for writing or wait for the buffer to be available
     // will be unlocked by queue callback
-    pthread_mutex_lock(&ctx->buffer_lock[ctx->cur_buf]);
+    // pthread_mutex_lock(&ctx->buffer_lock[ctx->cur_buf]);
 
     // (re-)allocate the buffer if not existant or of different size
     if (!ctx->buffer[ctx->cur_buf] || ctx->buffer[ctx->cur_buf]->mAudioDataBytesCapacity != pkt->size) {
         err = AudioQueueAllocateBuffer(ctx->queue, pkt->size, &ctx->buffer[ctx->cur_buf]);
         if (check_status(avctx, &err, "AudioQueueAllocateBuffer")) {
-            pthread_mutex_unlock(&ctx->buffer_lock[ctx->cur_buf]);
+            // pthread_mutex_unlock(&ctx->buffer_lock[ctx->cur_buf]);
             return AVERROR(ENOMEM);
         }
     }
@@ -263,7 +263,7 @@ static int at_write_packet(AVFormatContext *avctx, AVPacket *pkt)
     buf->mAudioDataByteSize = buf->mAudioDataBytesCapacity;
     err = AudioQueueEnqueueBuffer(ctx->queue, buf, 0, NULL);
     if (check_status(avctx, &err, "AudioQueueEnqueueBuffer")) {
-        pthread_mutex_unlock(&ctx->buffer_lock[ctx->cur_buf]);
+        // pthread_mutex_unlock(&ctx->buffer_lock[ctx->cur_buf]);
         return AVERROR(EINVAL);
     }
 
@@ -275,8 +275,8 @@ static av_cold int at_write_trailer(AVFormatContext *avctx)
     ATContext *ctx = (ATContext*)avctx->priv_data;
     OSStatus err = noErr;
 
-    pthread_mutex_destroy(&ctx->buffer_lock[0]);
-    pthread_mutex_destroy(&ctx->buffer_lock[1]);
+    // pthread_mutex_destroy(&ctx->buffer_lock[0]);
+    // pthread_mutex_destroy(&ctx->buffer_lock[1]);
 
     err = AudioQueueFlush(ctx->queue);
     check_status(avctx, &err, "AudioQueueFlush");

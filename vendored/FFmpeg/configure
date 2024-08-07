@@ -2296,7 +2296,7 @@ HEADERS_LIST="
     opencv2_core_core_c_h
     OpenGL_gl3_h
     poll_h
-    pthread_np_h
+    // pthread_np_h
     sys_hwprobe_h
     sys_param_h
     sys_resource_h
@@ -2400,9 +2400,9 @@ SYSTEM_FUNCS="
     PeekNamedPipe
     posix_memalign
     prctl
-    pthread_cancel
-    pthread_set_name_np
-    pthread_setname_np
+    // pthread_cancel
+    // pthread_set_name_np
+    // pthread_setname_np
     sched_getaffinity
     SecItemImport
     SetConsoleTextAttribute
@@ -6614,7 +6614,7 @@ check_headers malloc.h
 check_headers mftransform.h
 check_headers net/udplite.h
 check_headers poll.h
-check_headers pthread_np.h
+check_headers // pthread_np.h
 check_headers sys/param.h
 check_headers sys/resource.h
 check_headers sys/select.h
@@ -6763,35 +6763,35 @@ fi
 # check for some common methods of building with pthread support
 # do this before the optional library checks as some of them require pthreads
 if ! disabled pthreads && ! enabled w32threads && ! enabled os2threads; then
-    if check_lib pthreads pthread.h pthread_join   -pthread &&
-       check_lib pthreads pthread.h pthread_create -pthread; then
+    if check_lib pthreads pthread.h // pthread_join   -pthread &&
+       check_lib pthreads pthread.h // pthread_create -pthread; then
         add_cflags -pthread
-    elif check_lib pthreads pthread.h pthread_join   -pthreads &&
-         check_lib pthreads pthread.h pthread_create -pthreads; then
+    elif check_lib pthreads pthread.h // pthread_join   -pthreads &&
+         check_lib pthreads pthread.h // pthread_create -pthreads; then
         add_cflags -pthreads
-    elif check_lib pthreads pthread.h pthread_join   -ldl -pthread &&
-         check_lib pthreads pthread.h pthread_create -ldl -pthread; then
+    elif check_lib pthreads pthread.h // pthread_join   -ldl -pthread &&
+         check_lib pthreads pthread.h // pthread_create -ldl -pthread; then
         add_cflags -ldl -pthread
-    elif check_lib pthreads pthread.h pthread_join   -lpthreadGC2 &&
-         check_lib pthreads pthread.h pthread_create -lpthreadGC2; then
+    elif check_lib pthreads pthread.h // pthread_join   -lpthreadGC2 &&
+         check_lib pthreads pthread.h // pthread_create -lpthreadGC2; then
         :
-    elif check_lib pthreads pthread.h pthread_join   -lpthread &&
-         check_lib pthreads pthread.h pthread_create -lpthread; then
+    elif check_lib pthreads pthread.h // pthread_join   -lpthread &&
+         check_lib pthreads pthread.h // pthread_create -lpthread; then
         :
-    elif check_func pthread_join && check_func pthread_create; then
+    elif check_func // pthread_join && check_func // pthread_create; then
         enable pthreads
     fi
-    check_cc pthreads "pthread.h" "static pthread_mutex_t atomic_lock = PTHREAD_MUTEX_INITIALIZER"
+    check_cc pthreads "pthread.h" "static // pthread_mutex_t atomic_lock = // pthread_MUTEX_INITIALIZER"
 
     if enabled pthreads; then
         check_builtin sem_timedwait semaphore.h "sem_t *s; sem_init(s,0,0); sem_timedwait(s,0); sem_destroy(s)" $pthreads_extralibs
-        check_func pthread_cancel $pthreads_extralibs
+        check_func // pthread_cancel $pthreads_extralibs
         hdrs=pthread.h
-        if enabled pthread_np_h; then
-            hdrs="$hdrs pthread_np.h"
+        if enabled // pthread_np_h; then
+            hdrs="$hdrs // pthread_np.h"
         fi
-        check_lib pthread_set_name_np "$hdrs" pthread_set_name_np -lpthread
-        check_lib pthread_setname_np "$hdrs" pthread_setname_np -lpthread
+        check_lib // pthread_set_name_np "$hdrs" // pthread_set_name_np -lpthread
+        check_lib // pthread_setname_np "$hdrs" // pthread_setname_np -lpthread
     fi
 fi
 

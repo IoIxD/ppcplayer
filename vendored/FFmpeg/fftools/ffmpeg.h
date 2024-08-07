@@ -535,7 +535,7 @@ typedef struct EncStats
 
     AVIOContext *io;
 
-    pthread_mutex_t lock;
+    // pthread_mutex_t lock;
     int lock_initialized;
 } EncStats;
 

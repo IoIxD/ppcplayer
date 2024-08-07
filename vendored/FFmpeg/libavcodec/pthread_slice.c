@@ -27,7 +27,7 @@
 #include "avcodec.h"
 #include "codec_internal.h"
 #include "internal.h"
-#include "pthread_internal.h"
+#include "// pthread_internal.h"
 #include "thread.h"
 
 #include "libavutil/avassert.h"
@@ -37,16 +37,18 @@
 #include "libavutil/thread.h"
 #include "libavutil/slicethread.h"
 
-typedef int (action_func)(AVCodecContext *c, void *arg);
-typedef int (action_func2)(AVCodecContext *c, void *arg, int jobnr, int threadnr);
-typedef int (main_func)(AVCodecContext *c);
+typedef int(action_func)(AVCodecContext *c, void *arg);
+typedef int(action_func2)(AVCodecContext *c, void *arg, int jobnr, int threadnr);
+typedef int(main_func)(AVCodecContext *c);
 
-typedef struct Progress {
-    pthread_cond_t  cond;
-    pthread_mutex_t mutex;
+typedef struct Progress
+{
+    // pthread_cond_t  cond;
+    // pthread_mutex_t mutex;
 } Progress;
 
-typedef struct SliceThreadContext {
+typedef struct SliceThreadContext
+{
     AVSliceThread *thread;
     action_func *func;
     action_func2 *func2;
@@ -61,7 +63,8 @@ typedef struct SliceThreadContext {
     Progress *progress;
 } SliceThreadContext;
 
-static void main_function(void *priv) {
+static void main_function(void *priv)
+{
     AVCodecContext *avctx = priv;
     SliceThreadContext *c = avctx->internal->thread_ctx;
     c->mainfunc(avctx);
@@ -86,10 +89,11 @@ void ff_slice_thread_free(AVCodecContext *avctx)
 
     avpriv_slicethread_free(&c->thread);
 
-    for (i = 0; i < c->thread_count; i++) {
+    for (i = 0; i < c->thread_count; i++)
+    {
         Progress *const progress = &c->progress[i];
-        pthread_mutex_destroy(&progress->mutex);
-        pthread_cond_destroy(&progress->cond);
+        // pthread_mutex_destroy(&progress->mutex);
+        // pthread_cond_destroy(&progress->cond);
     }
 
     av_freep(&c->entries);
@@ -97,11 +101,11 @@ void ff_slice_thread_free(AVCodecContext *avctx)
     av_freep(&avctx->internal->thread_ctx);
 }
 
-static int thread_execute(AVCodecContext *avctx, action_func* func, void *arg, int *ret, int job_count, int job_size)
+static int thread_execute(AVCodecContext *avctx, action_func *func, void *arg, int *ret, int job_count, int job_size)
 {
     SliceThreadContext *c = avctx->internal->thread_ctx;
 
-    if (!(avctx->active_thread_type&FF_THREAD_SLICE) || avctx->thread_count <= 1)
+    if (!(avctx->active_thread_type & FF_THREAD_SLICE) || avctx->thread_count <= 1)
         return avcodec_default_execute(avctx, func, arg, ret, job_count, job_size);
 
     if (job_count <= 0)
@@ -112,18 +116,18 @@ static int thread_execute(AVCodecContext *avctx, action_func* func, void *arg, i
     c->func = func;
     c->rets = ret;
 
-    avpriv_slicethread_execute(c->thread, job_count, !!c->mainfunc  );
+    avpriv_slicethread_execute(c->thread, job_count, !!c->mainfunc);
     return 0;
 }
 
-static int thread_execute2(AVCodecContext *avctx, action_func2* func2, void *arg, int *ret, int job_count)
+static int thread_execute2(AVCodecContext *avctx, action_func2 *func2, void *arg, int *ret, int job_count)
 {
     SliceThreadContext *c = avctx->internal->thread_ctx;
     c->func2 = func2;
     return thread_execute(avctx, NULL, arg, ret, job_count, 0);
 }
 
-int ff_slice_thread_execute_with_mainfunc(AVCodecContext *avctx, action_func2* func2, main_func *mainfunc, void *arg, int *ret, int job_count)
+int ff_slice_thread_execute_with_mainfunc(AVCodecContext *avctx, action_func2 *func2, main_func *mainfunc, void *arg, int *ret, int job_count)
 {
     SliceThreadContext *c = avctx->internal->thread_ctx;
     c->func2 = func2;
@@ -143,10 +147,11 @@ int ff_slice_thread_init(AVCodecContext *avctx)
         avctx->height > 2800)
         thread_count = avctx->thread_count = 1;
 
-    if (!thread_count) {
+    if (!thread_count)
+    {
         int nb_cpus = av_cpu_count();
-        if  (avctx->height)
-            nb_cpus = FFMIN(nb_cpus, (avctx->height+15)/16);
+        if (avctx->height)
+            nb_cpus = FFMIN(nb_cpus, (avctx->height + 15) / 16);
         // use number of cores + 1 as thread count if there is more than one
         if (nb_cpus > 1)
             thread_count = avctx->thread_count = FFMIN(nb_cpus + 1, MAX_AUTO_THREADS);
@@ -154,14 +159,16 @@ int ff_slice_thread_init(AVCodecContext *avctx)
             thread_count = avctx->thread_count = 1;
     }
 
-    if (thread_count <= 1) {
+    if (thread_count <= 1)
+    {
         avctx->active_thread_type = 0;
         return 0;
     }
 
     avctx->internal->thread_ctx = c = av_mallocz(sizeof(*c));
     mainfunc = ffcodec(avctx->codec)->caps_internal & FF_CODEC_CAP_SLICE_THREAD_HAS_MF ? &main_function : NULL;
-    if (!c || (thread_count = avpriv_slicethread_create(&c->thread, avctx, worker_func, mainfunc, thread_count)) <= 1) {
+    if (!c || (thread_count = avpriv_slicethread_create(&c->thread, avctx, worker_func, mainfunc, thread_count)) <= 1)
+    {
         if (c)
             avpriv_slicethread_free(&c->thread);
         av_freep(&avctx->internal->thread_ctx);
@@ -182,22 +189,26 @@ int av_cold ff_slice_thread_init_progress(AVCodecContext *avctx)
     int err, i = 0, thread_count = avctx->thread_count;
 
     p->progress = av_calloc(thread_count, sizeof(*p->progress));
-    if (!p->progress) {
+    if (!p->progress)
+    {
         err = AVERROR(ENOMEM);
         goto fail;
     }
 
-    for (; i < thread_count; i++) {
+    for (; i < thread_count; i++)
+    {
         Progress *const progress = &p->progress[i];
-        err = pthread_mutex_init(&progress->mutex, NULL);
-        if (err) {
+        err = // pthread_mutex_init(&progress->mutex, NULL);
+            if (err)
+        {
             err = AVERROR(err);
             goto fail;
         }
-        err = pthread_cond_init (&progress->cond,  NULL);
-        if (err) {
+        err = // pthread_cond_init (&progress->cond,  NULL);
+            if (err)
+        {
             err = AVERROR(err);
-            pthread_mutex_destroy(&progress->mutex);
+            // pthread_mutex_destroy(&progress->mutex);
             goto fail;
         }
     }
@@ -213,47 +224,52 @@ void ff_thread_report_progress2(AVCodecContext *avctx, int field, int thread, in
     Progress *const progress = &p->progress[thread];
     int *entries = p->entries;
 
-    pthread_mutex_lock(&progress->mutex);
-    entries[field] +=n;
-    pthread_cond_signal(&progress->cond);
-    pthread_mutex_unlock(&progress->mutex);
+    // pthread_mutex_lock(&progress->mutex);
+    entries[field] += n;
+    // pthread_cond_signal(&progress->cond);
+    // pthread_mutex_unlock(&progress->mutex);
 }
 
 void ff_thread_await_progress2(AVCodecContext *avctx, int field, int thread, int shift)
 {
-    SliceThreadContext *p  = avctx->internal->thread_ctx;
+    SliceThreadContext *p = avctx->internal->thread_ctx;
     Progress *progress;
-    int *entries      = p->entries;
+    int *entries = p->entries;
 
-    if (!entries || !field) return;
+    if (!entries || !field)
+        return;
 
     thread = thread ? thread - 1 : p->thread_count - 1;
     progress = &p->progress[thread];
 
-    pthread_mutex_lock(&progress->mutex);
-    while ((entries[field - 1] - entries[field]) < shift){
-        pthread_cond_wait(&progress->cond, &progress->mutex);
+    // pthread_mutex_lock(&progress->mutex);
+    while ((entries[field - 1] - entries[field]) < shift)
+    {
+        // pthread_cond_wait(&progress->cond, &progress->mutex);
     }
-    pthread_mutex_unlock(&progress->mutex);
+    // pthread_mutex_unlock(&progress->mutex);
 }
 
 int ff_slice_thread_allocz_entries(AVCodecContext *avctx, int count)
 {
-    if (avctx->active_thread_type & FF_THREAD_SLICE)  {
+    if (avctx->active_thread_type & FF_THREAD_SLICE)
+    {
         SliceThreadContext *p = avctx->internal->thread_ctx;
 
-        if (p->entries_count == count) {
+        if (p->entries_count == count)
+        {
             memset(p->entries, 0, p->entries_count * sizeof(*p->entries));
             return 0;
         }
         av_freep(&p->entries);
 
-        p->entries       = av_calloc(count, sizeof(*p->entries));
-        if (!p->entries) {
+        p->entries = av_calloc(count, sizeof(*p->entries));
+        if (!p->entries)
+        {
             p->entries_count = 0;
             return AVERROR(ENOMEM);
         }
-        p->entries_count  = count;
+        p->entries_count = count;
     }
 
     return 0;

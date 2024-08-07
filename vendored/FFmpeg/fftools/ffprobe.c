@@ -72,17 +72,17 @@
 #include "libavutil/thread.h"
 
 #if !HAVE_THREADS
-#ifdef pthread_mutex_lock
-#undef pthread_mutex_lock
+#ifdef // pthread_mutex_lock
+#undef // pthread_mutex_lock
 #endif
-#define pthread_mutex_lock(a) \
+#define // pthread_mutex_lock(a) \
     do                        \
     {                         \
     } while (0)
-#ifdef pthread_mutex_unlock
-#undef pthread_mutex_unlock
+#ifdef  // pthread_mutex_unlock
+#undef  // pthread_mutex_unlock
 #endif
-#define pthread_mutex_unlock(a) \
+#define // pthread_mutex_unlock(a) \
     do                          \
     {                           \
     } while (0)
@@ -402,7 +402,7 @@ static uint64_t *nb_streams_frames;
 static int *selected_streams;
 
 #if HAVE_THREADS
-pthread_mutex_t log_mutex;
+// pthread_mutex_t log_mutex;
 #endif
 typedef struct LogBuffer
 {
@@ -431,7 +431,7 @@ static void log_callback(void *ptr, int level, const char *fmt, va_list vl)
     va_end(vl2);
 
 #if HAVE_THREADS
-    pthread_mutex_lock(&log_mutex);
+    // pthread_mutex_lock(&log_mutex);
 
     new_log_buffer = av_realloc_array(log_buffer, log_buffer_size + 1, sizeof(*log_buffer));
     if (new_log_buffer)
@@ -469,7 +469,7 @@ static void log_callback(void *ptr, int level, const char *fmt, va_list vl)
         log_buffer_size++;
     }
 
-    pthread_mutex_unlock(&log_mutex);
+    // pthread_mutex_unlock(&log_mutex);
 #endif
 }
 
@@ -3004,25 +3004,25 @@ static void clear_log(int need_lock)
     int i;
 
     if (need_lock)
-        pthread_mutex_lock(&log_mutex);
-    for (i = 0; i < log_buffer_size; i++)
-    {
-        av_freep(&log_buffer[i].context_name);
-        av_freep(&log_buffer[i].parent_name);
-        av_freep(&log_buffer[i].log_message);
-    }
+        // pthread_mutex_lock(&log_mutex);
+        for (i = 0; i < log_buffer_size; i++)
+        {
+            av_freep(&log_buffer[i].context_name);
+            av_freep(&log_buffer[i].parent_name);
+            av_freep(&log_buffer[i].log_message);
+        }
     log_buffer_size = 0;
     if (need_lock)
-        pthread_mutex_unlock(&log_mutex);
+    // pthread_mutex_unlock(&log_mutex);
 }
 
 static int show_log(WriterContext *w, int section_ids, int section_id, int log_level)
 {
     int i;
-    pthread_mutex_lock(&log_mutex);
+    // pthread_mutex_lock(&log_mutex);
     if (!log_buffer_size)
     {
-        pthread_mutex_unlock(&log_mutex);
+        // pthread_mutex_unlock(&log_mutex);
         return 0;
     }
     writer_print_section_header(w, NULL, section_ids);
@@ -3050,7 +3050,7 @@ static int show_log(WriterContext *w, int section_ids, int section_id, int log_l
         }
     }
     clear_log(0);
-    pthread_mutex_unlock(&log_mutex);
+    // pthread_mutex_unlock(&log_mutex);
 
     writer_print_section_footer(w);
 
@@ -5173,8 +5173,8 @@ int main(int argc, char **argv)
     init_dynload();
 
 #if HAVE_THREADS
-    ret = pthread_mutex_init(&log_mutex, NULL);
-    if (ret != 0)
+    ret = // pthread_mutex_init(&log_mutex, NULL);
+        if (ret != 0)
     {
         goto end;
     }
@@ -5339,7 +5339,7 @@ end:
     avformat_network_deinit();
 
 #if HAVE_THREADS
-    pthread_mutex_destroy(&log_mutex);
+    // pthread_mutex_destroy(&log_mutex);
 #endif
 
     return ret < 0;

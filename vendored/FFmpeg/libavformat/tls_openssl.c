@@ -29,13 +29,14 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-typedef struct TLSContext {
+typedef struct TLSContext
+{
     const AVClass *class;
     TLSShared tls_shared;
     SSL_CTX *ctx;
     SSL *ssl;
 #if OPENSSL_VERSION_NUMBER >= 0x1010000fL
-    BIO_METHOD* url_bio_method;
+    BIO_METHOD *url_bio_method;
 #endif
     int io_err;
 } TLSContext;
@@ -56,18 +57,18 @@ static int openssl_init;
 #include <openssl/crypto.h>
 #include "libavutil/mem.h"
 
-pthread_mutex_t *openssl_mutexes;
+// pthread_mutex_t *openssl_mutexes;
 static void openssl_lock(int mode, int type, const char *file, int line)
 {
     if (mode & CRYPTO_LOCK)
-        pthread_mutex_lock(&openssl_mutexes[type]);
-    else
-        pthread_mutex_unlock(&openssl_mutexes[type]);
+        // pthread_mutex_lock(&openssl_mutexes[type]);
+        else
+    // pthread_mutex_unlock(&openssl_mutexes[type]);
 }
 #if !defined(WIN32) && OPENSSL_VERSION_NUMBER < 0x10000000
 static unsigned long openssl_thread_id(void)
 {
-    return (intptr_t) pthread_self();
+    return (intptr_t) // pthread_self();
 }
 #endif
 #endif
@@ -75,20 +76,22 @@ static unsigned long openssl_thread_id(void)
 int ff_openssl_init(void)
 {
     ff_mutex_lock(&openssl_mutex);
-    if (!openssl_init) {
+    if (!openssl_init)
+    {
         SSL_library_init();
         SSL_load_error_strings();
 #if HAVE_THREADS
-        if (!CRYPTO_get_locking_callback()) {
+        if (!CRYPTO_get_locking_callback())
+        {
             int i;
-            openssl_mutexes = av_malloc_array(sizeof(pthread_mutex_t), CRYPTO_num_locks());
+            openssl_mutexes = av_malloc_array(sizeof(// pthread_mutex_t), CRYPTO_num_locks());
             if (!openssl_mutexes) {
                 ff_mutex_unlock(&openssl_mutex);
                 return AVERROR(ENOMEM);
             }
 
             for (i = 0; i < CRYPTO_num_locks(); i++)
-                pthread_mutex_init(&openssl_mutexes[i], NULL);
+                // pthread_mutex_init(&openssl_mutexes[i], NULL);
             CRYPTO_set_locking_callback(openssl_lock);
 #if !defined(WIN32) && OPENSSL_VERSION_NUMBER < 0x10000000
             CRYPTO_set_id_callback(openssl_thread_id);
@@ -106,14 +109,16 @@ void ff_openssl_deinit(void)
 {
     ff_mutex_lock(&openssl_mutex);
     openssl_init--;
-    if (!openssl_init) {
+    if (!openssl_init)
+    {
 #if HAVE_THREADS
-        if (CRYPTO_get_locking_callback() == openssl_lock) {
+        if (CRYPTO_get_locking_callback() == openssl_lock)
+        {
             int i;
             CRYPTO_set_locking_callback(NULL);
             for (i = 0; i < CRYPTO_num_locks(); i++)
-                pthread_mutex_destroy(&openssl_mutexes[i]);
-            av_free(openssl_mutexes);
+                // pthread_mutex_destroy(&openssl_mutexes[i]);
+                av_free(openssl_mutexes);
         }
 #endif
     }
@@ -125,16 +130,19 @@ static int print_tls_error(URLContext *h, int ret)
 {
     TLSContext *c = h->priv_data;
     int printed = 0, e, averr = AVERROR(EIO);
-    if (h->flags & AVIO_FLAG_NONBLOCK) {
+    if (h->flags & AVIO_FLAG_NONBLOCK)
+    {
         int err = SSL_get_error(c->ssl, ret);
         if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
             return AVERROR(EAGAIN);
     }
-    while ((e = ERR_get_error()) != 0) {
+    while ((e = ERR_get_error()) != 0)
+    {
         av_log(h, AV_LOG_ERROR, "%s\n", ERR_error_string(e, NULL));
         printed = 1;
     }
-    if (c->io_err) {
+    if (c->io_err)
+    {
         av_log(h, AV_LOG_ERROR, "IO error: %s\n", av_err2str(c->io_err));
         printed = 1;
         averr = c->io_err;
@@ -148,7 +156,8 @@ static int print_tls_error(URLContext *h, int ret)
 static int tls_close(URLContext *h)
 {
     TLSContext *c = h->priv_data;
-    if (c->ssl) {
+    if (c->ssl)
+    {
         SSL_shutdown(c->ssl);
         SSL_free(c->ssl);
     }
@@ -224,7 +233,8 @@ static int url_bio_bwrite(BIO *b, const char *buf, int len)
 
 static long url_bio_ctrl(BIO *b, int cmd, long num, void *ptr)
 {
-    if (cmd == BIO_CTRL_FLUSH) {
+    if (cmd == BIO_CTRL_FLUSH)
+    {
         BIO_clear_retry_flags(b);
         return 1;
     }
@@ -270,23 +280,27 @@ static int tls_open(URLContext *h, const char *uri, int flags, AVDictionary **op
     // enables support for all versions of SSL and TLS, and we then disable
     // support for the old protocols immediately after creating the context.
     p->ctx = SSL_CTX_new(c->listen ? SSLv23_server_method() : SSLv23_client_method());
-    if (!p->ctx) {
+    if (!p->ctx)
+    {
         av_log(h, AV_LOG_ERROR, "%s\n", ERR_error_string(ERR_get_error(), NULL));
         ret = AVERROR(EIO);
         goto fail;
     }
     SSL_CTX_set_options(p->ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
-    if (c->ca_file) {
+    if (c->ca_file)
+    {
         if (!SSL_CTX_load_verify_locations(p->ctx, c->ca_file, NULL))
             av_log(h, AV_LOG_ERROR, "SSL_CTX_load_verify_locations %s\n", ERR_error_string(ERR_get_error(), NULL));
     }
-    if (c->cert_file && !SSL_CTX_use_certificate_chain_file(p->ctx, c->cert_file)) {
+    if (c->cert_file && !SSL_CTX_use_certificate_chain_file(p->ctx, c->cert_file))
+    {
         av_log(h, AV_LOG_ERROR, "Unable to load cert file %s: %s\n",
                c->cert_file, ERR_error_string(ERR_get_error(), NULL));
         ret = AVERROR(EIO);
         goto fail;
     }
-    if (c->key_file && !SSL_CTX_use_PrivateKey_file(p->ctx, c->key_file, SSL_FILETYPE_PEM)) {
+    if (c->key_file && !SSL_CTX_use_PrivateKey_file(p->ctx, c->key_file, SSL_FILETYPE_PEM))
+    {
         av_log(h, AV_LOG_ERROR, "Unable to load key file %s: %s\n",
                c->key_file, ERR_error_string(ERR_get_error(), NULL));
         ret = AVERROR(EIO);
@@ -295,9 +309,10 @@ static int tls_open(URLContext *h, const char *uri, int flags, AVDictionary **op
     // Note, this doesn't check that the peer certificate actually matches
     // the requested hostname.
     if (c->verify)
-        SSL_CTX_set_verify(p->ctx, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+        SSL_CTX_set_verify(p->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
     p->ssl = SSL_new(p->ctx);
-    if (!p->ssl) {
+    if (!p->ssl)
+    {
         av_log(h, AV_LOG_ERROR, "%s\n", ERR_error_string(ERR_get_error(), NULL));
         ret = AVERROR(EIO);
         goto fail;
@@ -320,11 +335,14 @@ static int tls_open(URLContext *h, const char *uri, int flags, AVDictionary **op
     if (!c->listen && !c->numerichost)
         SSL_set_tlsext_host_name(p->ssl, c->host);
     ret = c->listen ? SSL_accept(p->ssl) : SSL_connect(p->ssl);
-    if (ret == 0) {
+    if (ret == 0)
+    {
         av_log(h, AV_LOG_ERROR, "Unable to negotiate TLS/SSL session\n");
         ret = AVERROR(EIO);
         goto fail;
-    } else if (ret < 0) {
+    }
+    else if (ret < 0)
+    {
         ret = print_tls_error(h, ret);
         goto fail;
     }
@@ -379,25 +397,24 @@ static int tls_get_short_seek(URLContext *h)
 
 static const AVOption options[] = {
     TLS_COMMON_OPTIONS(TLSContext, tls_shared),
-    { NULL }
-};
+    {NULL}};
 
 static const AVClass tls_class = {
     .class_name = "tls",
-    .item_name  = av_default_item_name,
-    .option     = options,
-    .version    = LIBAVUTIL_VERSION_INT,
+    .item_name = av_default_item_name,
+    .option = options,
+    .version = LIBAVUTIL_VERSION_INT,
 };
 
 const URLProtocol ff_tls_protocol = {
-    .name           = "tls",
-    .url_open2      = tls_open,
-    .url_read       = tls_read,
-    .url_write      = tls_write,
-    .url_close      = tls_close,
+    .name = "tls",
+    .url_open2 = tls_open,
+    .url_read = tls_read,
+    .url_write = tls_write,
+    .url_close = tls_close,
     .url_get_file_handle = tls_get_file_handle,
-    .url_get_short_seek  = tls_get_short_seek,
+    .url_get_short_seek = tls_get_short_seek,
     .priv_data_size = sizeof(TLSContext),
-    .flags          = URL_PROTOCOL_FLAG_NETWORK,
+    .flags = URL_PROTOCOL_FLAG_NETWORK,
     .priv_data_class = &tls_class,
 };

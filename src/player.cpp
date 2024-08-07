@@ -141,11 +141,9 @@ int audio_decode_frame(uint8_t *buf, int sample_rate)
 }
 
 #ifdef __RETRO68__
-int callback(void *input,
-             void *output,
+int callback(void *input, void *output,
              unsigned long frames,
-             PaTimestamp outTime,
-             void *userData)
+             PaTimestamp outTime, void *userData)
 #else
 int callback(const void *input, void *output, unsigned long frames, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
 #endif
@@ -288,29 +286,30 @@ namespace player
                        &stream,                              /* passes back stream pointer */
                        0,                                    /* no input channels */
                        audioCodecCtx->ch_layout.nb_channels, /* stereo output */
-                       paFloat32,                            /* 32 bit floating point output */
-                       audioCodecCtx->sample_rate,           /* sample rate */
-                       256,                                  /* frames per buffer */
-                       0,                                    /* number of buffers, if zero then use default minimum */
+                       paInt16,                              /* 32 bit floating point output */
+                       audioPar->sample_rate,                /* sample rate */
+                       64,                                   /* frames per buffer */
+                       audioCodecCtx->frame_size,            /* number of buffers, if zero then use default minimum */
                        callback,                             /* specify our custom callback */
                        &data);                               /* pass our data through to callback */
 #else
+        printf("frame size %d\n", audioCodecCtx->frame_size);
         PA_COMMAND(Pa_OpenDefaultStream(
-                       &stream, /* passes back stream pointer */
-                       0,       /* no input channels */
-                       audioCodecCtx->ch_layout.nb_channels,
-                       paFloat32,                  /* stereo output */
-                       audioCodecCtx->sample_rate, /* sample rate */
-                       256,                        /* frames per buffer */
-                       callback,                   /* specify our custom callback */
-                       &data);                     /* pass our data through to ` */
+                       &stream,                              /* passes back stream pointer */
+                       0,                                    /* no input channels */
+                       audioCodecCtx->ch_layout.nb_channels, /* stereo output */
+                       paInt32,                              /* format */
+                       audioPar->sample_rate,                /* sample rate */
+                       audioCodecCtx->frame_size,            /* frames per buffer */
+                       callback,                             /* specify our custom callback */
+                       &data);                               /* pass our data through to ` */
 #endif
         )
 
         data.sample_rate = audioPar->sample_rate;
 
-        PA_COMMAND(Pa_StartStream(stream));
-        //  SDL_PauseAudio(0);
+        // PA_COMMAND(Pa_StartStream(stream));
+        //   SDL_PauseAudio(0);
     }
     void Player::step()
     {

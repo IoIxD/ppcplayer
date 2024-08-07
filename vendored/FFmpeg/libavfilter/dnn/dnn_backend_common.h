@@ -29,18 +29,19 @@
 #include "libavutil/thread.h"
 
 #define DNN_DEFINE_CLASS_EXT(name, desc, options) \
-    {                                           \
-        .class_name = desc,                     \
-        .item_name  = av_default_item_name,     \
-        .option     = options,                  \
-        .version    = LIBAVUTIL_VERSION_INT,    \
-        .category   = AV_CLASS_CATEGORY_FILTER, \
+    {                                             \
+        .class_name = desc,                       \
+        .item_name = av_default_item_name,        \
+        .option = options,                        \
+        .version = LIBAVUTIL_VERSION_INT,         \
+        .category = AV_CLASS_CATEGORY_FILTER,     \
     }
 #define DNN_DEFINE_CLASS(fname) \
     DNN_DEFINE_CLASS_EXT(fname, #fname, fname##_options)
 
 // one task for one function call from dnn interface
-typedef struct TaskItem {
+typedef struct TaskItem
+{
     void *model; // model for the backend
     AVFrame *in_frame;
     AVFrame *out_frame;
@@ -54,7 +55,8 @@ typedef struct TaskItem {
 } TaskItem;
 
 // one task might have multiple inferences
-typedef struct LastLevelTaskItem {
+typedef struct LastLevelTaskItem
+{
     TaskItem *task;
     uint32_t bbox_index;
 } LastLevelTaskItem;
@@ -62,7 +64,8 @@ typedef struct LastLevelTaskItem {
 /**
  * Common Async Execution Mechanism for the DNN Backends.
  */
-typedef struct DNNAsyncExecModule {
+typedef struct DNNAsyncExecModule
+{
     /**
      * Synchronous inference function for the backend
      * with corresponding request item as the argument.
@@ -81,9 +84,9 @@ typedef struct DNNAsyncExecModule {
      * i.e. Request item for the backend.
      */
     void *args;
-#if HAVE_PTHREAD_CANCEL
-    pthread_t thread_id;
-    pthread_attr_t thread_attr;
+#if HAVE_ // pthread_CANCEL
+    // pthread_t thread_id;
+    // pthread_attr_t thread_attr;
 #endif
 } DNNAsyncExecModule;
 

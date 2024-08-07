@@ -28,8 +28,8 @@ struct PQueue
     AVList *last;
     int size;
     AVCodecContext *codecCtx;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
+    // pthread_mutex_t mutex;
+    // pthread_cond_t cond;
 };
 
 int audio_resampling(AVCodecContext *audio_decode_ctx, AVFrame *decoded_audio_frame,

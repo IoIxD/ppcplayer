@@ -25,12 +25,12 @@
 #include "libavutil/avassert.h"
 #include "libavutil/thread.h"
 
-#if HAVE_PTHREAD_CANCEL
-#define DNNCond pthread_cond_t
-#define dnn_cond_init pthread_cond_init
-#define dnn_cond_destroy pthread_cond_destroy
-#define dnn_cond_signal pthread_cond_signal
-#define dnn_cond_wait pthread_cond_wait
+#if HAVE_                // pthread_CANCEL
+#define DNNCond          // pthread_cond_t
+#define dnn_cond_init    // pthread_cond_init
+#define dnn_cond_destroy // pthread_cond_destroy
+#define dnn_cond_signal  // pthread_cond_signal
+#define dnn_cond_wait    // pthread_cond_wait
 #else
 #define DNNCond char
 static inline int dnn_cond_init(DNNCond *cond, const void *attr) { return 0; }
@@ -43,7 +43,8 @@ static inline int dnn_cond_wait(DNNCond *cond, AVMutex *mutex)
 }
 #endif
 
-struct SafeQueue {
+struct SafeQueue
+{
     Queue *q;
     AVMutex mutex;
     DNNCond cond;
@@ -56,7 +57,8 @@ SafeQueue *ff_safe_queue_create(void)
         return NULL;
 
     sq->q = ff_queue_create();
-    if (!sq->q) {
+    if (!sq->q)
+    {
         av_freep(&sq);
         return NULL;
     }
@@ -106,7 +108,8 @@ void *ff_safe_queue_pop_front(SafeQueue *sq)
 {
     void *value;
     ff_mutex_lock(&sq->mutex);
-    while (ff_queue_size(sq->q) == 0) {
+    while (ff_queue_size(sq->q) == 0)
+    {
         dnn_cond_wait(&sq->cond, &sq->mutex);
     }
     value = ff_queue_pop_front(sq->q);

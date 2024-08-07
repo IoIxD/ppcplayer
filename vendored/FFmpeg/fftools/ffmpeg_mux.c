@@ -849,8 +849,8 @@ static void enc_stats_uninit(EncStats *es)
     av_freep(&es->components);
 
     if (es->lock_initialized)
-        pthread_mutex_destroy(&es->lock);
-    es->lock_initialized = 0;
+        // pthread_mutex_destroy(&es->lock);
+        es->lock_initialized = 0;
 }
 
 static void ost_free(OutputStream **post)

@@ -38,10 +38,11 @@
 
 #if HAVE_THREADS && GNUTLS_VERSION_NUMBER <= 0x020b00
 #include <gcrypt.h>
-GCRY_THREAD_OPTION_PTHREAD_IMPL;
+GCRY_THREAD_OPTION_ // pthread_IMPL;
 #endif
 
-typedef struct TLSContext {
+    typedef struct TLSContext
+{
     const AVClass *class;
     TLSShared tls_shared;
     gnutls_session_t session;
@@ -73,7 +74,8 @@ void ff_gnutls_deinit(void)
 static int print_tls_error(URLContext *h, int ret)
 {
     TLSContext *c = h->priv_data;
-    switch (ret) {
+    switch (ret)
+    {
     case GNUTLS_E_AGAIN:
         return AVERROR(EAGAIN);
     case GNUTLS_E_INTERRUPTED:
@@ -88,7 +90,8 @@ static int print_tls_error(URLContext *h, int ret)
         av_log(h, AV_LOG_ERROR, "%s\n", gnutls_strerror(ret));
         break;
     }
-    if (c->io_err) {
+    if (c->io_err)
+    {
         av_log(h, AV_LOG_ERROR, "IO error: %s\n", av_err2str(c->io_err));
         ret = c->io_err;
         c->io_err = 0;
@@ -114,15 +117,18 @@ static int tls_close(URLContext *h)
 static ssize_t gnutls_url_pull(gnutls_transport_ptr_t transport,
                                void *buf, size_t len)
 {
-    TLSContext *c = (TLSContext*) transport;
+    TLSContext *c = (TLSContext *)transport;
     int ret = ffurl_read(c->tls_shared.tcp, buf, len);
     if (ret >= 0)
         return ret;
     if (ret == AVERROR_EXIT)
         return 0;
-    if (ret == AVERROR(EAGAIN)) {
+    if (ret == AVERROR(EAGAIN))
+    {
         errno = EAGAIN;
-    } else {
+    }
+    else
+    {
         errno = EIO;
         c->io_err = ret;
     }
@@ -132,15 +138,18 @@ static ssize_t gnutls_url_pull(gnutls_transport_ptr_t transport,
 static ssize_t gnutls_url_push(gnutls_transport_ptr_t transport,
                                const void *buf, size_t len)
 {
-    TLSContext *c = (TLSContext*) transport;
+    TLSContext *c = (TLSContext *)transport;
     int ret = ffurl_write(c->tls_shared.tcp, buf, len);
     if (ret >= 0)
         return ret;
     if (ret == AVERROR_EXIT)
         return 0;
-    if (ret == AVERROR(EAGAIN)) {
+    if (ret == AVERROR(EAGAIN))
+    {
         errno = EAGAIN;
-    } else {
+    }
+    else
+    {
         errno = EIO;
         c->io_err = ret;
     }
@@ -162,7 +171,8 @@ static int tls_open(URLContext *h, const char *uri, int flags, AVDictionary **op
     if (!c->listen && !c->numerichost)
         gnutls_server_name_set(p->session, GNUTLS_NAME_DNS, c->host, strlen(c->host));
     gnutls_certificate_allocate_credentials(&p->cred);
-    if (c->ca_file) {
+    if (c->ca_file)
+    {
         ret = gnutls_certificate_set_x509_trust_file(p->cred, c->ca_file, GNUTLS_X509_FMT_PEM);
         if (ret < 0)
             av_log(h, AV_LOG_ERROR, "%s\n", gnutls_strerror(ret));
@@ -171,55 +181,64 @@ static int tls_open(URLContext *h, const char *uri, int flags, AVDictionary **op
     else
         gnutls_certificate_set_x509_system_trust(p->cred);
 #endif
-    gnutls_certificate_set_verify_flags(p->cred, c->verify ?
-                                        GNUTLS_VERIFY_ALLOW_X509_V1_CA_CRT : 0);
-    if (c->cert_file && c->key_file) {
+    gnutls_certificate_set_verify_flags(p->cred, c->verify ? GNUTLS_VERIFY_ALLOW_X509_V1_CA_CRT : 0);
+    if (c->cert_file && c->key_file)
+    {
         ret = gnutls_certificate_set_x509_key_file(p->cred,
                                                    c->cert_file, c->key_file,
                                                    GNUTLS_X509_FMT_PEM);
-        if (ret < 0) {
+        if (ret < 0)
+        {
             av_log(h, AV_LOG_ERROR,
                    "Unable to set cert/key files %s and %s: %s\n",
                    c->cert_file, c->key_file, gnutls_strerror(ret));
             ret = AVERROR(EIO);
             goto fail;
         }
-    } else if (c->cert_file || c->key_file)
+    }
+    else if (c->cert_file || c->key_file)
         av_log(h, AV_LOG_ERROR, "cert and key required\n");
     gnutls_credentials_set(p->session, GNUTLS_CRD_CERTIFICATE, p->cred);
     gnutls_transport_set_pull_function(p->session, gnutls_url_pull);
     gnutls_transport_set_push_function(p->session, gnutls_url_push);
     gnutls_transport_set_ptr(p->session, p);
     gnutls_set_default_priority(p->session);
-    do {
-        if (ff_check_interrupt(&h->interrupt_callback)) {
+    do
+    {
+        if (ff_check_interrupt(&h->interrupt_callback))
+        {
             ret = AVERROR_EXIT;
             goto fail;
         }
 
         ret = gnutls_handshake(p->session);
-        if (gnutls_error_is_fatal(ret)) {
+        if (gnutls_error_is_fatal(ret))
+        {
             ret = print_tls_error(h, ret);
             goto fail;
         }
     } while (ret);
     p->need_shutdown = 1;
-    if (c->verify) {
+    if (c->verify)
+    {
         unsigned int status, cert_list_size;
         gnutls_x509_crt_t cert;
         const gnutls_datum_t *cert_list;
-        if ((ret = gnutls_certificate_verify_peers2(p->session, &status)) < 0) {
+        if ((ret = gnutls_certificate_verify_peers2(p->session, &status)) < 0)
+        {
             av_log(h, AV_LOG_ERROR, "Unable to verify peer certificate: %s\n",
-                                    gnutls_strerror(ret));
+                   gnutls_strerror(ret));
             ret = AVERROR(EIO);
             goto fail;
         }
-        if (status & GNUTLS_CERT_INVALID) {
+        if (status & GNUTLS_CERT_INVALID)
+        {
             av_log(h, AV_LOG_ERROR, "Peer certificate failed verification\n");
             ret = AVERROR(EIO);
             goto fail;
         }
-        if (gnutls_certificate_type_get(p->session) != GNUTLS_CRT_X509) {
+        if (gnutls_certificate_type_get(p->session) != GNUTLS_CRT_X509)
+        {
             av_log(h, AV_LOG_ERROR, "Unsupported certificate type\n");
             ret = AVERROR(EIO);
             goto fail;
@@ -229,7 +248,8 @@ static int tls_open(URLContext *h, const char *uri, int flags, AVDictionary **op
         gnutls_x509_crt_import(cert, cert_list, GNUTLS_X509_FMT_DER);
         ret = gnutls_x509_crt_check_hostname(cert, c->host);
         gnutls_x509_crt_deinit(cert);
-        if (!ret) {
+        if (!ret)
+        {
             av_log(h, AV_LOG_ERROR,
                    "The certificate's owner does not match hostname %s\n", c->host);
             ret = AVERROR(EIO);
@@ -287,25 +307,24 @@ static int tls_get_short_seek(URLContext *h)
 
 static const AVOption options[] = {
     TLS_COMMON_OPTIONS(TLSContext, tls_shared),
-    { NULL }
-};
+    {NULL}};
 
 static const AVClass tls_class = {
     .class_name = "tls",
-    .item_name  = av_default_item_name,
-    .option     = options,
-    .version    = LIBAVUTIL_VERSION_INT,
+    .item_name = av_default_item_name,
+    .option = options,
+    .version = LIBAVUTIL_VERSION_INT,
 };
 
 const URLProtocol ff_tls_protocol = {
-    .name           = "tls",
-    .url_open2      = tls_open,
-    .url_read       = tls_read,
-    .url_write      = tls_write,
-    .url_close      = tls_close,
+    .name = "tls",
+    .url_open2 = tls_open,
+    .url_read = tls_read,
+    .url_write = tls_write,
+    .url_close = tls_close,
     .url_get_file_handle = tls_get_file_handle,
-    .url_get_short_seek  = tls_get_short_seek,
+    .url_get_short_seek = tls_get_short_seek,
     .priv_data_size = sizeof(TLSContext),
-    .flags          = URL_PROTOCOL_FLAG_NETWORK,
+    .flags = URL_PROTOCOL_FLAG_NETWORK,
     .priv_data_class = &tls_class,
 };

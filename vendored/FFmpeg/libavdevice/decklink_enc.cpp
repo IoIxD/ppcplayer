@@ -158,10 +158,10 @@ public:
         if (frame->_avpacket)
             av_packet_unref(frame->_avpacket);
 
-        pthread_mutex_lock(&ctx->mutex);
+        // pthread_mutex_lock(&ctx->mutex);
         ctx->frames_buffer_available_spots++;
-        pthread_cond_broadcast(&ctx->cond);
-        pthread_mutex_unlock(&ctx->mutex);
+        // pthread_cond_broadcast(&ctx->cond);
+        // pthread_mutex_unlock(&ctx->mutex);
 
         return S_OK;
     }
@@ -238,8 +238,8 @@ static int decklink_setup_video(AVFormatContext *avctx, AVStream *st)
     /* Buffer twice as many frames as the preroll. */
     ctx->frames_buffer = ctx->frames_preroll * 2;
     ctx->frames_buffer = FFMIN(ctx->frames_buffer, 60);
-    pthread_mutex_init(&ctx->mutex, NULL);
-    pthread_cond_init(&ctx->cond, NULL);
+    // pthread_mutex_init(&ctx->mutex, NULL);
+    // pthread_cond_init(&ctx->cond, NULL);
     ctx->frames_buffer_available_spots = ctx->frames_buffer;
 
     av_log(avctx, AV_LOG_DEBUG, "output: %s, preroll: %d, frames buffer size: %d\n",
@@ -415,8 +415,8 @@ av_cold int ff_decklink_write_trailer(AVFormatContext *avctx)
     if (ctx->output_callback)
         delete ctx->output_callback;
 
-    pthread_mutex_destroy(&ctx->mutex);
-    pthread_cond_destroy(&ctx->cond);
+        // pthread_mutex_destroy(&ctx->mutex);
+        // pthread_cond_destroy(&ctx->cond);
 
 #if CONFIG_LIBKLVANC
     klvanc_context_destroy(ctx->vanc_ctx);
@@ -790,13 +790,13 @@ static int decklink_write_video_packet(AVFormatContext *avctx, AVPacket *pkt)
     }
 
     /* Always keep at most one second of frames buffered. */
-    pthread_mutex_lock(&ctx->mutex);
+    // pthread_mutex_lock(&ctx->mutex);
     while (ctx->frames_buffer_available_spots == 0)
     {
-        pthread_cond_wait(&ctx->cond, &ctx->mutex);
+        // pthread_cond_wait(&ctx->cond, &ctx->mutex);
     }
     ctx->frames_buffer_available_spots--;
-    pthread_mutex_unlock(&ctx->mutex);
+    // pthread_mutex_unlock(&ctx->mutex);
 
     if (ctx->first_pts == AV_NOPTS_VALUE)
         ctx->first_pts = pkt->pts;

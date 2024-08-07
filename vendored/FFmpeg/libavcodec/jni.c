@@ -36,20 +36,24 @@
 
 static void *java_vm;
 static void *android_app_ctx;
-static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+static // pthread_mutex_t lock = // pthread_MUTEX_INITIALIZER;
 
-int av_jni_set_java_vm(void *vm, void *log_ctx)
+    int
+    av_jni_set_java_vm(void *vm, void *log_ctx)
 {
     int ret = 0;
 
-    pthread_mutex_lock(&lock);
-    if (java_vm == NULL) {
+    // pthread_mutex_lock(&lock);
+    if (java_vm == NULL)
+    {
         java_vm = vm;
-    } else if (java_vm != vm) {
+    }
+    else if (java_vm != vm)
+    {
         ret = AVERROR(EINVAL);
         av_log(log_ctx, AV_LOG_ERROR, "A Java virtual machine has already been set");
     }
-    pthread_mutex_unlock(&lock);
+    // pthread_mutex_unlock(&lock);
 
     return ret;
 }
@@ -58,9 +62,9 @@ void *av_jni_get_java_vm(void *log_ctx)
 {
     void *vm;
 
-    pthread_mutex_lock(&lock);
+    // pthread_mutex_lock(&lock);
     vm = java_vm;
-    pthread_mutex_unlock(&lock);
+    // pthread_mutex_unlock(&lock);
 
     return vm;
 }
@@ -91,14 +95,15 @@ int av_jni_set_android_app_ctx(void *app_ctx, void *log_ctx)
         return AVERROR(EINVAL);
 
     type = (*env)->GetObjectRefType(env, app_ctx);
-    if (type != JNIGlobalRefType) {
+    if (type != JNIGlobalRefType)
+    {
         av_log(log_ctx, AV_LOG_ERROR, "Application context must be passed as a global reference");
         return AVERROR(EINVAL);
     }
 
-    pthread_mutex_lock(&lock);
+    // pthread_mutex_lock(&lock);
     android_app_ctx = app_ctx;
-    pthread_mutex_unlock(&lock);
+    // pthread_mutex_unlock(&lock);
 
     return 0;
 #else
@@ -111,9 +116,9 @@ void *av_jni_get_android_app_ctx(void)
 #if CONFIG_JNI
     void *ctx;
 
-    pthread_mutex_lock(&lock);
+    // pthread_mutex_lock(&lock);
     ctx = android_app_ctx;
-    pthread_mutex_unlock(&lock);
+    // pthread_mutex_unlock(&lock);
 
     return ctx;
 #else
