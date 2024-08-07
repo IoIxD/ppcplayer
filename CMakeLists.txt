@@ -44,9 +44,10 @@ message(CMAKE_CXX_COMPILER ": " ${CMAKE_CXX_COMPILER})
 include(ExternalProject)
 
 
+
 # Retro68: compile ffmpeg and link against the OpenGL stub.
 if(CMAKE_SYSTEM_NAME MATCHES Retro)
-    set_target_properties(ppcplayer PROPERTIES COMPILE_FLAGS "-ffunction-sections -mcpu=601 -O3 -Wall -Wextra -Wno-unused-parameter")
+    set_target_properties(ppcplayer PROPERTIES COMPILE_FLAGS "-ffunction-sections -g -mcpu=601 -O3 -Wall -Wextra -Wno-unused-parameter")
     set_target_properties(ppcplayer PROPERTIES LINK_FLAGS "-Wl,-gc-sections")
 
     file(GLOB_RECURSE sources   

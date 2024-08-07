@@ -1,19 +1,9 @@
-#ifndef __FF2GL_H
-#define __FF2GL_H
+#include "GL/gl.h"
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
 #include <libswresample/swresample.h>
-
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "GL/gl.h"
-
-#include "macros.h"
 
 #define __UNSUPPORTED_ENUM(enum)                                          \
     case enum:                                                            \
@@ -23,6 +13,7 @@
 #define RETURN_AND_PRINT(enum)              \
     printf("Selected GL Enum " #enum "\n"); \
     return enum;
+
 GLint ffmpeg_pix_format_to_gl(int pix_format)
 {
     switch (pix_format)
@@ -519,5 +510,3 @@ GLint ffmpeg_pix_format_to_gl(int pix_format)
         return 0;
     }
 }
-
-#endif

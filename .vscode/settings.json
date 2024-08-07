@@ -93,6 +93,8 @@
     "mactypes.h": "c",
     "string.h": "c",
     "timer.h": "c",
-    "pa_unix.h": "c"
+    "pa_unix.h": "c",
+    "macros.h": "c",
+    "stdbool.h": "c"
   }
 }

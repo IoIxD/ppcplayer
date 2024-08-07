@@ -1,6 +1,7 @@
 extern "C"
 {
 #include "macros.h"
+#include "ff2gl.h"
 }
 // #include "SDL.h"
 #include "GL/gl.h"
@@ -9,7 +10,6 @@ extern "C"
 #include "player.hpp"
 // #include "console/Console.hpp"
 #include <stdio.h>
-#include "ff2gl.h"
 
 #ifdef __RETRO68__
 #include "apple/usleep.h"
@@ -92,10 +92,10 @@ void UpdateTexture(GLsizei width, GLsizei height, uint8_t *data)
 
 void idle(void)
 {
-    // auto framerate = pl->framerate();
+    auto framerate = pl->framerate();
     pl->step();
     GL_COMMAND(glutPostRedisplay());
-    // usleep(framerate);
+    usleep(framerate);
 }
 
 void display_hasVideo(void)
